@@ -1,0 +1,3 @@
+requests==2.25.1
+environs==9.3.2
+python-slugify==5.0.2
