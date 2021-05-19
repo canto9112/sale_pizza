@@ -1,7 +1,7 @@
 import requests
 
 
-def crate_product(token, name, slug, sku, description, currency, amount):
+def get_product_id(token, name, slug, sku, description, currency, amount):
     headers = {'Authorization': f'Bearer {token}',
                'Content-Type': 'application/json'}
 
@@ -23,9 +23,8 @@ def crate_product(token, name, slug, sku, description, currency, amount):
                      'commodity_type': "physical"}}
 
     response = requests.post('https://api.moltin.com/v2/products', headers=headers, json=data)
-    print(response.json())
     response.raise_for_status()
-    return response.json()
+    return response.json()['data']['id']
 
 
 def get_product(token, product_id):
