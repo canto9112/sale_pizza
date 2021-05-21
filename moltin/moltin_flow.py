@@ -19,7 +19,6 @@ def get_flow_id(token):
     }}
 
     response = requests.post('https://api.moltin.com/v2/flows', headers=headers, json=data)
-    pprint(response.json())
     response.raise_for_status()
     flow_id = response.json()['data']['id']
     flow_slug = response.json()['data']['slug']
