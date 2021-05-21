@@ -50,7 +50,6 @@ def add_product(token, name_folder):
         product_id = get_product_id(token, name, slug, sku, description, currency, amount)
         image_id = moltin.moltin_file.get_file_id(token, slug, image_url, name_folder)
         moltin.moltin_file.create_main_image(token, product_id, image_id)
-        break
 
 
 def add_entrys(token, flow_slug):
@@ -72,9 +71,9 @@ if __name__ == '__main__':
     moltin_access_token = get_authorization_token(moltin_client_id, moltin_client_secret)
     add_product(moltin_access_token, images_folder)
 
-    # flow_id, flow_slug = moltin.moltin_flow.get_flow_id(moltin_access_token)
-    # create_field(moltin_access_token, flow_id)
-    # add_entrys(moltin_access_token, flow_slug)
+    flow_id, flow_slug = moltin.moltin_flow.get_flow_id(moltin_access_token)
+    create_field(moltin_access_token, flow_id)
+    add_entrys(moltin_access_token, flow_slug)
 
     # delete images
     path = os.path.join(os.path.abspath(os.path.dirname(__file__)), images_folder)
