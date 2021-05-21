@@ -1,6 +1,8 @@
 import json
 from environs import Env
 from slugify import slugify
+import os
+import shutil
 
 from pprint import pprint
 from moltin.moltin_authentication import get_authorization_token
@@ -35,7 +37,7 @@ def create_field(token, flow_id):
         moltin.moltin_flow.create_fields(token, field['name'], field['slug'], field['field_type'], field['description'], flow_id)
 
 
-def add_product(token):
+def add_product(token, name_folder):
     pizzas = get_json('json/menu.json')
     for pizza in pizzas:
         name = pizza['name']
@@ -46,8 +48,9 @@ def add_product(token):
         amount = pizza['price']
         image_url = pizza['product_image']['url']
         product_id = get_product_id(token, name, slug, sku, description, currency, amount)
-        image_id = moltin.moltin.get_file_id(token, slug, image_url)
-        moltin.moltin.create_main_image(token, product_id, image_id)
+        image_id = moltin.moltin_file.get_file_id(token, slug, image_url, name_folder)
+        moltin.moltin_file.create_main_image(token, product_id, image_id)
+        break
 
 
 def add_entrys(token, flow_slug):
@@ -63,11 +66,16 @@ def add_entrys(token, flow_slug):
 if __name__ == '__main__':
     env = Env()
     env.read_env()
-
+    images_folder = 'images'
     moltin_client_id = env('MOLTIN_CLIENT_ID')
     moltin_client_secret = env('MOLTIN_CLIENT_SECRET')
     moltin_access_token = get_authorization_token(moltin_client_id, moltin_client_secret)
-    # add_product(moltin_access_token)
-    flow_id, flow_slug = moltin.moltin_flow.get_flow_id(moltin_access_token)
-    create_field(moltin_access_token, flow_id)
-    add_entrys(moltin_access_token, flow_slug)
+    add_product(moltin_access_token, images_folder)
+
+    # flow_id, flow_slug = moltin.moltin_flow.get_flow_id(moltin_access_token)
+    # create_field(moltin_access_token, flow_id)
+    # add_entrys(moltin_access_token, flow_slug)
+
+    # delete images
+    path = os.path.join(os.path.abspath(os.path.dirname(__file__)), images_folder)
+    shutil.rmtree(path)
