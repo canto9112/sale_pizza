@@ -1,5 +1,6 @@
 import requests
 from pprint import pprint
+import os
 
 
 def create_main_image(token, product_id, image_id):
@@ -17,12 +18,19 @@ def create_main_image(token, product_id, image_id):
     return response.json()
 
 
-def get_file_id(token, file_name, file_url):
+def save_image(file_name, file_url, folder_name):
+    images_path = folder_name
+    if not os.path.exists(images_path):
+        os.mkdir(images_path)
     response = requests.get(file_url)
     response.raise_for_status()
 
-    with open(f'{file_name}.jpg', 'wb') as file:
+    with open(f'{images_path}/{file_name}.jpg', 'wb') as file:
         file.write(response.content)
+
+
+def get_file_id(token, file_name, file_url, folder_name):
+    save_image(file_name, file_url, folder_name)
 
     headers = {
         'Authorization': f'Bearer {token}'
@@ -30,11 +38,9 @@ def get_file_id(token, file_name, file_url):
     files = {
         'public': True,
         'file': open(f'{file_name}.jpg', 'rb')
-
     }
 
     response = requests.post('https://api.moltin.com/v2/files', headers=headers, files=files)
-    pprint(response.json())
     return response.json()['data']['id']
 
 
