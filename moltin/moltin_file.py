@@ -1,6 +1,4 @@
 import requests
-from pprint import pprint
-import os
 
 
 def create_main_image(token, product_id, image_id):
@@ -39,16 +37,3 @@ def get_image_url(token, file_id):
     response.raise_for_status()
     return response.json()['data']['link']['href']
 
-
-def create_customer(token, name, email):
-    headers = {'Authorization': f'Bearer {token}',
-               'Content-Type': 'application/json'}
-
-    data = {'data': {
-                "type": "customer",
-                "name": name,
-                "email": email}}
-
-    response = requests.post('https://api.moltin.com/v2/customers', headers=headers, json=data)
-    response.raise_for_status()
-    return response.json()
