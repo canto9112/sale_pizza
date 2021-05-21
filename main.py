@@ -1,14 +1,14 @@
 import json
-from environs import Env
-from slugify import slugify
 import os
 import shutil
 
-from pprint import pprint
-from moltin.moltin_authentication import get_authorization_token
-from moltin.moltin_product import get_product_id
+from environs import Env
+from slugify import slugify
+
 import moltin.moltin_file
 import moltin.moltin_flow
+from moltin.moltin_authentication import get_authorization_token
+from moltin.moltin_product import get_product_id
 
 
 def get_json(json_file):

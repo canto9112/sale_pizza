@@ -1,9 +1,4 @@
 import requests
-from pprint import pprint
-from moltin.moltin_authentication import get_authorization_token
-import moltin
-from environs import Env
-import json
 
 
 def get_flow_id(token):
