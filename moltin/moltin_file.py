@@ -18,19 +18,7 @@ def create_main_image(token, product_id, image_id):
     return response.json()
 
 
-def save_image(file_name, file_url, folder_name):
-    if not os.path.exists(folder_name):
-        os.mkdir(folder_name)
-    response = requests.get(file_url)
-    response.raise_for_status()
-
-    with open(f'{folder_name}/{file_name}.jpg', 'wb') as file:
-        file.write(response.content)
-
-
-def get_file_id(token, file_name, file_url, folder_name):
-    save_image(file_name, file_url, folder_name)
-
+def get_file_id(token, file_name, folder_name):
     headers = {
         'Authorization': f'Bearer {token}'
     }

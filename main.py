@@ -9,11 +9,22 @@ import moltin.moltin_file
 import moltin.moltin_flow
 from moltin.moltin_authentication import get_authorization_token
 from moltin.moltin_product import get_product_id
+import requests
 
 
 def get_json(json_file):
     with open(json_file, "r") as file:
         return json.load(file)
+
+
+def save_image(file_name, file_url, folder_name):
+    if not os.path.exists(folder_name):
+        os.mkdir(folder_name)
+    response = requests.get(file_url)
+    response.raise_for_status()
+
+    with open(f'{folder_name}/{file_name}.jpg', 'wb') as file:
+        file.write(response.content)
 
 
 def create_field(token, flow_id):
@@ -48,7 +59,8 @@ def add_product(token, name_folder):
         amount = pizza['price']
         image_url = pizza['product_image']['url']
         product_id = get_product_id(token, name, slug, sku, description, currency, amount)
-        image_id = moltin.moltin_file.get_file_id(token, slug, image_url, name_folder)
+        save_image(slug, image_url, name_folder)
+        image_id = moltin.moltin_file.get_file_id(token, slug, name_folder)
         moltin.moltin_file.create_main_image(token, product_id, image_id)
 
 
