@@ -52,7 +52,7 @@ def add_product(token, name_folder):
         moltin.moltin_file.create_main_image(token, product_id, image_id)
 
 
-def add_entrys(token, flow_slug):
+def add_entries(token, flow_slug):
     addresses = get_json('json/addresses.json')
     for address_pizzeria in addresses:
         address = address_pizzeria['address']['full']
@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
     flow_id, flow_slug = moltin.moltin_flow.get_flow_id(moltin_access_token)
     create_field(moltin_access_token, flow_id)
-    add_entrys(moltin_access_token, flow_slug)
+    add_entries(moltin_access_token, flow_slug)
 
     # delete images
     path = os.path.join(os.path.abspath(os.path.dirname(__file__)), images_folder)
