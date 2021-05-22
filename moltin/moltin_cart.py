@@ -1,4 +1,5 @@
 import requests
+from pprint import pprint
 
 
 def get_cart(token, cart_name):
@@ -31,7 +32,8 @@ def clean_cart(token, cart_id):
 
 def add_product_to_cart(token, product_id, cart_name, quantity):
     headers = {'Authorization': f'Bearer {token}',
-               'Content-Type': 'application/json'}
+               'Content-Type': 'application/json',
+               'X-MOLTIN-CURRENCY': 'RUB'}
 
     data = {'data': {'id': product_id,
                      'type': 'cart_item',
