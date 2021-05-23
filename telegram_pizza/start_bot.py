@@ -10,31 +10,47 @@ from validate_email import validate_email
 from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_product, moltin_customer
 from telegram_pizza import bot_cart
 from pprint import pprint
+from telegram_bot_pagination import InlineKeyboardPaginator
+import requests
 
 
+# def get_page_number():
+#
 def start(bot, update, products):
-    keyboard = start_keyboard(products)
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    menu = start_keyboard(products)
+    buttons = [InlineKeyboardButton("Назад", callback_data="Назад"),
+               InlineKeyboardButton("Вперед", callback_data="Вперед")]
+    menu.append(buttons)
+    reply_markup = InlineKeyboardMarkup(menu)
     update.message.reply_text('Выберите пиццу:', reply_markup=reply_markup)
     return "HANDLE_MENU"
 
 
+def split(arr, size):
+    arrs = []
+    while len(arr) > size:
+        pice = arr[:size]
+        arrs.append(pice)
+        arr = arr[size:]
+    arrs.append(arr)
+    return arrs
+
+
 def start_keyboard(products):
     keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
+    split(keyboard, 8)
     return keyboard
 
 
 def del_old_message(bot, update):
     query = update.callback_query
     old_message = update.callback_query.message['message_id']
-
     bot.delete_message(chat_id=query.message.chat_id,
                        message_id=old_message)
 
 
-def handle_button_menu(bot, update, access_token):
+def handle_button_menu(bot, update, access_token, products):
     query = update.callback_query
-
     product = moltin_product.get_product(access_token, query.data)
 
     product_name = product['data']['name']
@@ -71,13 +87,47 @@ def get_cart(bot, update, products, access_token):
         return 'HANDLE_MENU'
 
     elif query.data == 'Оплатить':
-        bot.send_message(chat_id=query.message.chat_id, text='Введите вашу почту для связи:')
-        return "WAITING_EMAIL"
+        bot.send_message(chat_id=query.message.chat_id, text='Пришлтите вашу геолокацию')
+        return "WAITING_GEO"
+        # bot.send_message(chat_id=query.message.chat_id, text='Введите вашу почту для связи:')
+        # return "WAITING_EMAIL"
 
     elif query.data:
         moltin_cart.delete_product_in_cart(access_token, query.message.chat_id, query.data)
         bot_cart.update_cart(bot, update, access_token)
         return "HANDLE_CART"
+
+
+def fetch_coordinates(place, apikey):
+    base_url = "https://geocode-maps.yandex.ru/1.x"
+    params = {"geocode": place,
+              "apikey": apikey,
+              "format": "json"}
+    response = requests.get(base_url, params=params)
+    response.raise_for_status()
+    return response.json()
+
+
+def get_location(bot, update, yandex_apikey):
+    query = update.callback_query
+    message = update.message['text']
+
+    if message is None:
+        print(message)
+        message = update.message
+        current_pos = (message.location.latitude, message.location.longitude)
+        update.message.reply_text(current_pos)
+    else:
+        print(message)
+        places = fetch_coordinates(message, yandex_apikey)
+        found_places = places['response']['GeoObjectCollection']['featureMember']
+        if found_places:
+            most_relevant = found_places[0]
+            lon, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
+            update.message.reply_text(f'{lat} / {lon}')
+        else:
+            update.message.reply_text('Не можем определить ваш адрес\n'
+                                      'Попробуйте еще раз!')
 
 
 def send_mail(bot, update, access_token, products):
@@ -116,18 +166,16 @@ def handle_description(bot, update, products, access_token):
         return 'HANDLE_MENU'
 
     elif button == 'Корзина':
-
         bot_cart.update_cart(bot, update, access_token)
         return "HANDLE_CART"
 
     elif button:
-
         moltin_cart.add_product_to_cart(access_token, product_id, query.message.chat_id, 1)
         update.callback_query.answer(text=f"{button} добавлена в корзину")
         return "HANDLE_DESCRIPTION"
 
 
-def handle_users_reply(bot, update, moltin_access_token):
+def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
     products = moltin_product.get_all_products(moltin_access_token)
     if update.message:
         user_reply = update.message.text
@@ -145,7 +193,7 @@ def handle_users_reply(bot, update, moltin_access_token):
     states_functions = {
         'START': partial(start,
                          products=products),
-        'HANDLE_MENU': partial(handle_button_menu,
+        'HANDLE_MENU': partial(handle_button_menu, products=products,
                                access_token=moltin_access_token),
         'HANDLE_DESCRIPTION': partial(handle_description,
                                       products=products,
@@ -155,7 +203,8 @@ def handle_users_reply(bot, update, moltin_access_token):
                                access_token=moltin_access_token),
         'WAITING_EMAIL': partial(send_mail,
                                  access_token=moltin_access_token,
-                                 products=products)
+                                 products=products),
+        'WAITING_GEO': partial(get_location, yandex_apikey=yandex_apikey)
     }
     state_handler = states_functions[user_state]
 
@@ -182,6 +231,7 @@ if __name__ == '__main__':
     telegram_token = env("TELEGRAM_TOKEN")
     moltin_client_id = env('MOLTIN_CLIENT_ID')
     moltin_client_secret = env('MOLTIN_CLIENT_SECRET')
+    yandex_apikey = env('YANDEX_APIKEY')
 
     moltin_access_token = moltin_authentication.get_authorization_token(moltin_client_id, moltin_client_secret)
 
@@ -189,10 +239,14 @@ if __name__ == '__main__':
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CallbackQueryHandler(partial(handle_users_reply,
-                                                        moltin_access_token=moltin_access_token)))
+                                                        moltin_access_token=moltin_access_token,
+                                                        yandex_apikey=yandex_apikey)))
     dispatcher.add_handler(MessageHandler(Filters.text, (partial(handle_users_reply,
-                                                                 moltin_access_token=moltin_access_token))))
+                                                                 moltin_access_token=moltin_access_token,
+                                                                 yandex_apikey=yandex_apikey))))
     dispatcher.add_handler(CommandHandler('start', (partial(handle_users_reply,
-                                                            moltin_access_token=moltin_access_token))))
+                                                            moltin_access_token=moltin_access_token,
+                                                            yandex_apikey=yandex_apikey))))
+    dispatcher.add_handler(MessageHandler(Filters.location, get_location))
 
     updater.start_polling()
