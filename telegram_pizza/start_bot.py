@@ -7,11 +7,12 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageHandler, Updater
 from validate_email import validate_email
 
-from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_product, moltin_customer
+from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_product, moltin_customer, moltin_flow
 from telegram_pizza import bot_cart
 from pprint import pprint
 from telegram_bot_pagination import InlineKeyboardPaginator
 import requests
+from geopy import distance
 
 
 # def get_page_number():
@@ -127,6 +128,32 @@ def loc(bot, update):
             return "WAITING_LOC"
 
 
+    all_entries = moltin_flow.get_all_entries(moltin_access_token, 'pizzerias')
+    all_pizzerias = []
+    for entries in all_entries:
+        dist = get_distation(entries['latitude'], entries['longitude'], lat, lon)
+        all_pizzerias.append({'address': entries['address'],
+                              'lat': entries['latitude'],
+                              'lon': entries['longitude'],
+                              'distance_to_user': dist})
+
+    def get_pizzerias_distance(pizzerias):
+        return pizzerias['distance_to_user']
+    nearby_pizzeria = min(all_pizzerias, key=get_pizzerias_distance)
+    update.message.reply_text(f'Ближайшая пиццерия {nearby_pizzeria["address"]}')
+
+
+def get_all_entries():
+    all_entries = moltin_flow.get_all_entries(moltin_access_token, 'pizzerias')
+
+
+def get_distation(lat_pizzeria, lon_pizzeria, lat_user, lon_user):
+    newport_ri = (lat_pizzeria, lon_pizzeria)
+    slantsy = (lat_user, lon_user)
+    distance_user = distance.distance(newport_ri, slantsy).m
+    return distance_user
+
+
 def send_mail(bot, update, access_token, products):
     users_reply = update.message.text
     is_valid_email = check_email(users_reply)
@@ -201,7 +228,6 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         'WAITING_EMAIL': partial(send_mail,
                                  access_token=moltin_access_token,
                                  products=products),
-        # 'WAITING_GEO': partial(get_location, yandex_apikey=yandex_apikey),
         'WAITING_LOC': loc
     }
     state_handler = states_functions[user_state]
