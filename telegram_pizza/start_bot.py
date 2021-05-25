@@ -88,7 +88,7 @@ def get_cart(bot, update, products, access_token):
 
     elif query.data == 'Оплатить':
         bot.send_message(chat_id=query.message.chat_id, text='Пришлтите вашу геолокацию')
-        return "WAITING_GEO"
+        return "WAITING_LOC"
         # bot.send_message(chat_id=query.message.chat_id, text='Введите вашу почту для связи:')
         # return "WAITING_EMAIL"
 
@@ -108,17 +108,13 @@ def fetch_coordinates(place, apikey):
     return response.json()
 
 
-def get_location(bot, update, yandex_apikey):
-    query = update.callback_query
+def loc(bot, update):
     message = update.message['text']
-
     if message is None:
-        print(message)
         message = update.message
-        current_pos = (message.location.latitude, message.location.longitude)
-        update.message.reply_text(current_pos)
+        lat, lon = (message.location.latitude, message.location.longitude)
+        update.message.reply_text(f'{lat} / {lon}')
     else:
-        print(message)
         places = fetch_coordinates(message, yandex_apikey)
         found_places = places['response']['GeoObjectCollection']['featureMember']
         if found_places:
@@ -128,6 +124,7 @@ def get_location(bot, update, yandex_apikey):
         else:
             update.message.reply_text('Не можем определить ваш адрес\n'
                                       'Попробуйте еще раз!')
+            return "WAITING_LOC"
 
 
 def send_mail(bot, update, access_token, products):
@@ -204,7 +201,8 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         'WAITING_EMAIL': partial(send_mail,
                                  access_token=moltin_access_token,
                                  products=products),
-        'WAITING_GEO': partial(get_location, yandex_apikey=yandex_apikey)
+        # 'WAITING_GEO': partial(get_location, yandex_apikey=yandex_apikey),
+        'WAITING_LOC': loc
     }
     state_handler = states_functions[user_state]
 
@@ -247,6 +245,6 @@ if __name__ == '__main__':
     dispatcher.add_handler(CommandHandler('start', (partial(handle_users_reply,
                                                             moltin_access_token=moltin_access_token,
                                                             yandex_apikey=yandex_apikey))))
-    dispatcher.add_handler(MessageHandler(Filters.location, get_location))
+    dispatcher.add_handler(MessageHandler(Filters.location, loc))
 
     updater.start_polling()

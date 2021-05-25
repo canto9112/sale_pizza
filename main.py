@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 
+import requests
 from environs import Env
 from slugify import slugify
 
@@ -9,7 +10,6 @@ import moltin.moltin_file
 import moltin.moltin_flow
 from moltin.moltin_authentication import get_authorization_token
 from moltin.moltin_product import get_product_id
-import requests
 
 
 def get_json(json_file):
@@ -28,7 +28,7 @@ def save_image(file_name, file_url, folder_name):
 
 
 def create_field(token, flow_id):
-    pizzeria_field = [{'name': 'Adress',
+    pizzeria_field = [{'name': 'Address',
                        'slug': 'address',
                        'field_type': 'string',
                        'description': 'Адрес пиццерии'},
@@ -77,12 +77,14 @@ def add_entries(token, flow_slug):
 if __name__ == '__main__':
     env = Env()
     env.read_env()
+
     images_folder = 'images'
+
     moltin_client_id = env('MOLTIN_CLIENT_ID')
     moltin_client_secret = env('MOLTIN_CLIENT_SECRET')
     moltin_access_token = get_authorization_token(moltin_client_id, moltin_client_secret)
-    add_product(moltin_access_token, images_folder)
 
+    add_product(moltin_access_token, images_folder)
     flow_id, flow_slug = moltin.moltin_flow.get_flow_id(moltin_access_token)
     create_field(moltin_access_token, flow_id)
     add_entries(moltin_access_token, flow_slug)

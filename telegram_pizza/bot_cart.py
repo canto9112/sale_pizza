@@ -21,13 +21,9 @@ def update_cart(bot, update, access_token):
     for product_in_cart in cart_items['data']:
 
         product_name = product_in_cart['name']
-
         description = product_in_cart['description']
-
         price = product_in_cart['meta']['display_price']['with_tax']['unit']['formatted']
-
         quantity = product_in_cart['quantity']
-
         all_price = product_in_cart['meta']['display_price']['with_tax']['value']['formatted']
 
         button = [InlineKeyboardButton(f'Убрать из корзины {product_name}', callback_data=product_in_cart['id'])]
