@@ -15,8 +15,6 @@ import requests
 from geopy import distance
 
 
-# def get_page_number():
-#
 def start(bot, update, products):
     menu = start_keyboard(products)
     buttons = [InlineKeyboardButton("Назад", callback_data="Назад"),
