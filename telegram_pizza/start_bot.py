@@ -127,7 +127,10 @@ def loc(bot, update):
                                       'Попробуйте еще раз!')
             return "WAITING_LOC"
 
+    get_nearby_pizzeria(bot, update, lat, lon)
 
+
+def get_nearby_pizzeria(bot, update, lat, lon):
     all_entries = moltin_flow.get_all_entries(moltin_access_token, 'pizzerias')
     all_pizzerias = []
     for entries in all_entries:
@@ -139,12 +142,9 @@ def loc(bot, update):
 
     def get_pizzerias_distance(pizzerias):
         return pizzerias['distance_to_user']
+
     nearby_pizzeria = min(all_pizzerias, key=get_pizzerias_distance)
     update.message.reply_text(f'Ближайшая пиццерия {nearby_pizzeria["address"]}')
-
-
-def get_all_entries():
-    all_entries = moltin_flow.get_all_entries(moltin_access_token, 'pizzerias')
 
 
 def get_distation(lat_pizzeria, lon_pizzeria, lat_user, lon_user):
