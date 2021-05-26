@@ -125,11 +125,11 @@ def get_user_location(bot, update):
                                       'Попробуйте еще раз!')
             return "WAITING_LOC"
 
-    nearby_pizzeria = get_nearby_pizzeria(bot, update, lat, lon)
-    send_choising_delivery(nearby_pizzeria, update)
+    nearby_pizzeria = get_nearby_pizzeria(lat, lon)
+    send_choosing_delivery(nearby_pizzeria, update)
 
 
-def get_nearby_pizzeria(bot, update, lat, lon):
+def get_nearby_pizzeria(lat, lon):
     all_entries = moltin_flow.get_all_entries(moltin_access_token, 'pizzerias')
     all_pizzerias = []
     for entries in all_entries:
@@ -146,7 +146,7 @@ def get_nearby_pizzeria(bot, update, lat, lon):
     return nearby_pizzeria
 
 
-def send_choising_delivery(nearby_pizzeria, update):
+def send_choosing_delivery(nearby_pizzeria, update):
     print(nearby_pizzeria["distance_to_user"])
     if nearby_pizzeria["distance_to_user"] <= 500:
         update.message.reply_text(f'Вы можете забрать пиццу самостоятельно по адресу:\n'
