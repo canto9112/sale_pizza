@@ -114,14 +114,12 @@ def loc(bot, update):
     if message is None:
         message = update.message
         lat, lon = (message.location.latitude, message.location.longitude)
-        update.message.reply_text(f'{lat} / {lon}')
     else:
         places = fetch_coordinates(message, yandex_apikey)
         found_places = places['response']['GeoObjectCollection']['featureMember']
         if found_places:
             most_relevant = found_places[0]
             lon, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
-            update.message.reply_text(f'{lat} / {lon}')
         else:
             update.message.reply_text('Не можем определить ваш адрес\n'
                                       'Попробуйте еще раз!')
