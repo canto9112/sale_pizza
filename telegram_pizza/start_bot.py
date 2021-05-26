@@ -77,7 +77,7 @@ def handle_button_menu(bot, update, access_token, products):
 
 def get_cart(bot, update, products, access_token):
     query = update.callback_query
-
+    print(query.data)
     if query.data == 'Меню':
         del_old_message(bot, update)
         keyboard = start_keyboard(products)
@@ -124,7 +124,8 @@ def get_user_location(bot, update):
             return "WAITING_LOC"
 
     nearby_pizzeria = get_nearby_pizzeria(lat, lon)
-    send_choosing_delivery(nearby_pizzeria, update)
+    send_choosing_delivery(bot, update, nearby_pizzeria)
+    return "WAITING_ADDRESS_OR_DELIVERY"
 
 
 def get_nearby_pizzeria(lat, lon):
@@ -144,21 +145,33 @@ def get_nearby_pizzeria(lat, lon):
     return nearby_pizzeria
 
 
-def send_choosing_delivery(nearby_pizzeria, update):
-    print(nearby_pizzeria["distance_to_user"])
+def send_choosing_delivery(bot, update, nearby_pizzeria):
+    query = update.callback_query
+    # print(nearby_pizzeria["distance_to_user"])
+    keyboard = [
+        [InlineKeyboardButton('Доставка', callback_data='Доставка')],
+        [InlineKeyboardButton("Самовывоз", callback_data='Самовывоз')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
     if nearby_pizzeria["distance_to_user"] <= 500:
         update.message.reply_text(f'Вы можете забрать пиццу самостоятельно по адресу:\n'
                                   f'{nearby_pizzeria["address"]}.\n'
-                                  f'Или заказать бесплатную доставку')
+                                  f'Или заказать бесплатную доставку',
+                                  reply_markup=reply_markup)
     elif 500 < nearby_pizzeria["distance_to_user"] <= 5000:
         update.message.reply_text(f'Доставка будет стоить 100 рублей.\n'
-                                  f'Доставляем или самовывоз?')
+                                  f'Доставляем или самовывоз?',
+                                  reply_markup=reply_markup)
     elif 5000 < nearby_pizzeria["distance_to_user"] <= 20000:
         update.message.reply_text(f'Доставка будет стоить 300 рублей.\n'
-                                  f'Доставляем или самовывоз?')
+                                  f'Доставляем или самовывоз?',
+                                  reply_markup=reply_markup)
     else:
         update.message.reply_text(f'Слишком далеко\n'
-                                  f'Ближайшая пиццерия аж в {int(nearby_pizzeria["distance_to_user"] / 1000)} км\n')
+                                  f'Ближайшая пиццерия аж в {int(nearby_pizzeria["distance_to_user"] / 1000)} км\n',
+                                  reply_markup=reply_markup)
+
 
 
 def get_distance(lat_pizzeria, lon_pizzeria, lat_user, lon_user):
@@ -213,6 +226,17 @@ def handle_description(bot, update, products, access_token):
         return "HANDLE_DESCRIPTION"
 
 
+def get_address_or_delivery(bot, update):
+    query = update.callback_query
+    print(query.data)
+
+    if query.data == 'Доставка':
+        bot.send_message(chat_id=query.message.chat_id, text='Доставка')
+
+    elif query.data == 'Самовывоз':
+        bot.send_message(chat_id=query.message.chat_id, text='Самовывоз')
+
+
 def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
     products = moltin_product.get_all_products(moltin_access_token)
     if update.message:
@@ -234,7 +258,8 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         'HANDLE_DESCRIPTION': partial(handle_description, products=products, access_token=moltin_access_token),
         'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
         'WAITING_EMAIL': partial(send_mail, access_token=moltin_access_token, products=products),
-        'WAITING_LOC': get_user_location
+        'WAITING_LOC': get_user_location,
+        'WAITING_ADDRESS_OR_DELIVERY': get_address_or_delivery
     }
     state_handler = states_functions[user_state]
 
