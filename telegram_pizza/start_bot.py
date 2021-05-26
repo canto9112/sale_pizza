@@ -109,7 +109,7 @@ def fetch_coordinates(place, apikey):
     return response.json()
 
 
-def loc(bot, update):
+def get_user_location(bot, update):
     message = update.message['text']
     if message is None:
         message = update.message
@@ -125,14 +125,15 @@ def loc(bot, update):
                                       'Попробуйте еще раз!')
             return "WAITING_LOC"
 
-    get_nearby_pizzeria(bot, update, lat, lon)
+    nearby_pizzeria = get_nearby_pizzeria(bot, update, lat, lon)
+    send_choising_delivery(nearby_pizzeria, update)
 
 
 def get_nearby_pizzeria(bot, update, lat, lon):
     all_entries = moltin_flow.get_all_entries(moltin_access_token, 'pizzerias')
     all_pizzerias = []
     for entries in all_entries:
-        dist = get_distation(entries['latitude'], entries['longitude'], lat, lon)
+        dist = get_distance(entries['latitude'], entries['longitude'], lat, lon)
         all_pizzerias.append({'address': entries['address'],
                               'lat': entries['latitude'],
                               'lon': entries['longitude'],
@@ -142,14 +143,31 @@ def get_nearby_pizzeria(bot, update, lat, lon):
         return pizzerias['distance_to_user']
 
     nearby_pizzeria = min(all_pizzerias, key=get_pizzerias_distance)
-    update.message.reply_text(f'Ближайшая пиццерия {nearby_pizzeria["address"]}')
+    return nearby_pizzeria
 
 
-def get_distation(lat_pizzeria, lon_pizzeria, lat_user, lon_user):
-    newport_ri = (lat_pizzeria, lon_pizzeria)
-    slantsy = (lat_user, lon_user)
-    distance_user = distance.distance(newport_ri, slantsy).m
-    return distance_user
+def send_choising_delivery(nearby_pizzeria, update):
+    print(nearby_pizzeria["distance_to_user"])
+    if nearby_pizzeria["distance_to_user"] <= 500:
+        update.message.reply_text(f'Вы можете забрать пиццу самостоятельно по адресу:\n'
+                                  f'{nearby_pizzeria["address"]}.\n'
+                                  f'Или заказать бесплатную доставку')
+    elif 500 < nearby_pizzeria["distance_to_user"] <= 5000:
+        update.message.reply_text(f'Доставка будет стоить 100 рублей.\n'
+                                  f'Доставляем или самовывоз?')
+    elif 5000 < nearby_pizzeria["distance_to_user"] <= 20000:
+        update.message.reply_text(f'Доставка будет стоить 300 рублей.\n'
+                                  f'Доставляем или самовывоз?')
+    else:
+        update.message.reply_text(f'Слишком далеко\n'
+                                  f'Ближайшая пиццерия аж в {int(nearby_pizzeria["distance_to_user"] / 1000)} км\n')
+
+
+def get_distance(lat_pizzeria, lon_pizzeria, lat_user, lon_user):
+    pizzeria_location = (lat_pizzeria, lon_pizzeria)
+    user_location = (lat_user, lon_user)
+    distance_user = distance.distance(pizzeria_location, user_location).m
+    return int(distance_user)
 
 
 def send_mail(bot, update, access_token, products):
@@ -213,20 +231,12 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         user_state = db.get(chat_id).decode("utf-8")
 
     states_functions = {
-        'START': partial(start,
-                         products=products),
-        'HANDLE_MENU': partial(handle_button_menu, products=products,
-                               access_token=moltin_access_token),
-        'HANDLE_DESCRIPTION': partial(handle_description,
-                                      products=products,
-                                      access_token=moltin_access_token),
-        'HANDLE_CART': partial(get_cart,
-                               products=products,
-                               access_token=moltin_access_token),
-        'WAITING_EMAIL': partial(send_mail,
-                                 access_token=moltin_access_token,
-                                 products=products),
-        'WAITING_LOC': loc
+        'START': partial(start, products=products),
+        'HANDLE_MENU': partial(handle_button_menu, products=products, access_token=moltin_access_token),
+        'HANDLE_DESCRIPTION': partial(handle_description, products=products, access_token=moltin_access_token),
+        'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
+        'WAITING_EMAIL': partial(send_mail, access_token=moltin_access_token, products=products),
+        'WAITING_LOC': get_user_location
     }
     state_handler = states_functions[user_state]
 
@@ -269,6 +279,6 @@ if __name__ == '__main__':
     dispatcher.add_handler(CommandHandler('start', (partial(handle_users_reply,
                                                             moltin_access_token=moltin_access_token,
                                                             yandex_apikey=yandex_apikey))))
-    dispatcher.add_handler(MessageHandler(Filters.location, loc))
+    dispatcher.add_handler(MessageHandler(Filters.location, get_user_location))
 
     updater.start_polling()
