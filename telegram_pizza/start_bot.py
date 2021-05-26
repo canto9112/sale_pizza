@@ -77,7 +77,6 @@ def handle_button_menu(bot, update, access_token, products):
 
 def get_cart(bot, update, products, access_token):
     query = update.callback_query
-    print(query.data)
     if query.data == 'Меню':
         del_old_message(bot, update)
         keyboard = start_keyboard(products)
@@ -122,7 +121,6 @@ def get_user_location(bot, update):
             update.message.reply_text('Не можем определить ваш адрес\n'
                                       'Попробуйте еще раз!')
             return "WAITING_LOC"
-
     nearby_pizzeria = get_nearby_pizzeria(lat, lon)
     send_choosing_delivery(bot, update, nearby_pizzeria)
     return "WAITING_ADDRESS_OR_DELIVERY"
@@ -146,8 +144,6 @@ def get_nearby_pizzeria(lat, lon):
 
 
 def send_choosing_delivery(bot, update, nearby_pizzeria):
-    query = update.callback_query
-    # print(nearby_pizzeria["distance_to_user"])
     keyboard = [
         [InlineKeyboardButton('Доставка', callback_data='Доставка')],
         [InlineKeyboardButton("Самовывоз", callback_data='Самовывоз')]
@@ -172,6 +168,14 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
                                   f'Ближайшая пиццерия аж в {int(nearby_pizzeria["distance_to_user"] / 1000)} км\n',
                                   reply_markup=reply_markup)
 
+
+def get_address_or_delivery(bot, update):
+    query = update.callback_query
+    if query.data == 'Доставка':
+        bot.send_message(chat_id=query.message.chat_id, text='Доставка')
+
+    elif query.data == 'Самовывоз':
+        bot.send_message(chat_id=query.message.chat_id, text=f'Вот ближайшая к вам пиццерия: ')
 
 
 def get_distance(lat_pizzeria, lon_pizzeria, lat_user, lon_user):
@@ -224,17 +228,6 @@ def handle_description(bot, update, products, access_token):
         moltin_cart.add_product_to_cart(access_token, product_id, query.message.chat_id, 1)
         update.callback_query.answer(text=f"{button} добавлена в корзину")
         return "HANDLE_DESCRIPTION"
-
-
-def get_address_or_delivery(bot, update):
-    query = update.callback_query
-    print(query.data)
-
-    if query.data == 'Доставка':
-        bot.send_message(chat_id=query.message.chat_id, text='Доставка')
-
-    elif query.data == 'Самовывоз':
-        bot.send_message(chat_id=query.message.chat_id, text='Самовывоз')
 
 
 def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
