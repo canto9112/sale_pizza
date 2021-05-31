@@ -14,6 +14,8 @@ from telegram_bot_pagination import InlineKeyboardPaginator
 import requests
 from geopy import distance
 
+id_customer = None
+
 
 def start(bot, update, products):
     menu = start_keyboard(products)
@@ -96,16 +98,6 @@ def get_cart(bot, update, products, access_token):
         return "HANDLE_CART"
 
 
-def fetch_coordinates(place, apikey):
-    base_url = "https://geocode-maps.yandex.ru/1.x"
-    params = {"geocode": place,
-              "apikey": apikey,
-              "format": "json"}
-    response = requests.get(base_url, params=params)
-    response.raise_for_status()
-    return response.json()
-
-
 def get_user_location(bot, update):
     message = update.message['text']
     if message is None:
@@ -121,9 +113,27 @@ def get_user_location(bot, update):
             update.message.reply_text('Не можем определить ваш адрес\n'
                                       'Попробуйте еще раз!')
             return "WAITING_LOC"
-    nearby_pizzeria = get_nearby_pizzeria(lat, lon)
-    send_choosing_delivery(bot, update, nearby_pizzeria)
-    return "WAITING_ADDRESS_OR_DELIVERY"
+    return lat, lon
+    # nearby_pizzeria = get_nearby_pizzeria(lat, lon)
+    # send_choosing_delivery(bot, update, nearby_pizzeria)
+    # return "WAITING_ADDRESS_OR_DELIVERY"
+
+
+def fetch_coordinates(place, apikey):
+    base_url = "https://geocode-maps.yandex.ru/1.x"
+    params = {"geocode": place,
+              "apikey": apikey,
+              "format": "json"}
+    response = requests.get(base_url, params=params)
+    response.raise_for_status()
+    return response.json()
+
+
+def get_distance(lat_pizzeria, lon_pizzeria, lat_user, lon_user):
+    pizzeria_location = (lat_pizzeria, lon_pizzeria)
+    user_location = (lat_user, lon_user)
+    distance_user = distance.distance(pizzeria_location, user_location).m
+    return int(distance_user)
 
 
 def get_nearby_pizzeria(lat, lon):
@@ -170,19 +180,36 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
 
 
 def get_address_or_delivery(bot, update):
+
+    users_reply = update.message.text
+    chat_id = update.message.chat_id
+    lat, lon = get_user_location(bot, update)
+    nearby_pizzeria = get_nearby_pizzeria(lat, lon)
+    send_choosing_delivery(bot, update, nearby_pizzeria)
+    id_customer = moltin_flow.create_customer(moltin_access_token, 'Customer_Address', users_reply, str(chat_id), lat, lon)
+    db.set(str(chat_id) + '_id_customer', id_customer)
+    return 'WAITING_ADDRESS'
+
+
+def wait_address(bot, update, products):
     query = update.callback_query
+
     if query.data == 'Доставка':
         bot.send_message(chat_id=query.message.chat_id, text='Доставка')
 
     elif query.data == 'Самовывоз':
-        bot.send_message(chat_id=query.message.chat_id, text=f'Вот ближайшая к вам пиццерия: ')
+        chat_id = update.callback_query.message.chat_id
+        id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
+        lat, lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
+        nearby_pizzeria = get_nearby_pizzeria(lat, lon)
 
+        bot.send_message(chat_id=query.message.chat_id,
+                         text=f'Вот адрес ближайшей пиццерии: \n'
+                              f'{nearby_pizzeria["address"]}\n'
+                              f'До новых встреч!\n'
+                              f'Для возврата нажмите /start')
 
-def get_distance(lat_pizzeria, lon_pizzeria, lat_user, lon_user):
-    pizzeria_location = (lat_pizzeria, lon_pizzeria)
-    user_location = (lat_user, lon_user)
-    distance_user = distance.distance(pizzeria_location, user_location).m
-    return int(distance_user)
+        moltin_cart.clean_cart(moltin_access_token, chat_id)
 
 
 def send_mail(bot, update, access_token, products):
@@ -251,8 +278,8 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         'HANDLE_DESCRIPTION': partial(handle_description, products=products, access_token=moltin_access_token),
         'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
         'WAITING_EMAIL': partial(send_mail, access_token=moltin_access_token, products=products),
-        'WAITING_LOC': get_user_location,
-        'WAITING_ADDRESS_OR_DELIVERY': get_address_or_delivery
+        'WAITING_LOC': get_address_or_delivery,
+        'WAITING_ADDRESS': partial(wait_address, products=products)
     }
     state_handler = states_functions[user_state]
 
@@ -295,6 +322,6 @@ if __name__ == '__main__':
     dispatcher.add_handler(CommandHandler('start', (partial(handle_users_reply,
                                                             moltin_access_token=moltin_access_token,
                                                             yandex_apikey=yandex_apikey))))
-    dispatcher.add_handler(MessageHandler(Filters.location, get_user_location))
+    dispatcher.add_handler(MessageHandler(Filters.location, get_address_or_delivery))
 
     updater.start_polling()
