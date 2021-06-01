@@ -182,18 +182,22 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
 def get_address_or_delivery(bot, update):
 
     users_reply = update.message.text
+    print(users_reply)
     chat_id = update.message.chat_id
     lat, lon = get_user_location(bot, update)
     nearby_pizzeria = get_nearby_pizzeria(lat, lon)
+    print(nearby_pizzeria)
     send_choosing_delivery(bot, update, nearby_pizzeria)
     id_customer = moltin_flow.create_customer(moltin_access_token, 'Customer_Address', users_reply, str(chat_id), lat, lon)
-    db.set(str(chat_id) + '_id_customer', id_customer)
+    print(id_customer['data']['id'])
+    db.set(str(chat_id) + '_id_customer', id_customer['data']['id'])
     return 'WAITING_ADDRESS'
 
 
-def wait_address(bot, update, products):
+def wait_address(bot, update):
+    pprint(update)
     query = update.callback_query
-
+    print(query.data)
     if query.data == 'Доставка':
         bot.send_message(chat_id=query.message.chat_id, text='Доставка')
 
@@ -202,14 +206,13 @@ def wait_address(bot, update, products):
         id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
         lat, lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
         nearby_pizzeria = get_nearby_pizzeria(lat, lon)
-
         bot.send_message(chat_id=query.message.chat_id,
                          text=f'Вот адрес ближайшей пиццерии: \n'
                               f'{nearby_pizzeria["address"]}\n'
                               f'До новых встреч!\n'
-                              f'Для возврата нажмите /start')
-
+                              f'Для возврата в начало магазина нажмите /start')
         moltin_cart.clean_cart(moltin_access_token, chat_id)
+
 
 
 def send_mail(bot, update, access_token, products):
@@ -279,7 +282,7 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
         'WAITING_EMAIL': partial(send_mail, access_token=moltin_access_token, products=products),
         'WAITING_LOC': get_address_or_delivery,
-        'WAITING_ADDRESS': partial(wait_address, products=products)
+        'WAITING_ADDRESS': wait_address
     }
     state_handler = states_functions[user_state]
 
