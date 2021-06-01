@@ -144,7 +144,8 @@ def get_nearby_pizzeria(lat, lon):
         all_pizzerias.append({'address': entries['address'],
                               'lat': entries['latitude'],
                               'lon': entries['longitude'],
-                              'distance_to_user': dist})
+                              'distance_to_user': dist,
+                              'courier': entries['id_telegram_courier']})
 
     def get_pizzerias_distance(pizzerias):
         return pizzerias['distance_to_user']
@@ -154,6 +155,9 @@ def get_nearby_pizzeria(lat, lon):
 
 
 def send_choosing_delivery(bot, update, nearby_pizzeria):
+    up_5_km_delivery_price = 100
+    up_20_km_delivery_price = 300
+
     keyboard = [
         [InlineKeyboardButton('Доставка', callback_data='Доставка')],
         [InlineKeyboardButton("Самовывоз", callback_data='Самовывоз')]
@@ -166,11 +170,11 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
                                   f'Или заказать бесплатную доставку',
                                   reply_markup=reply_markup)
     elif 500 < nearby_pizzeria["distance_to_user"] <= 5000:
-        update.message.reply_text(f'Доставка будет стоить 100 рублей.\n'
+        update.message.reply_text(f'Доставка будет стоить {up_5_km_delivery_price} рублей.\n'
                                   f'Доставляем или самовывоз?',
                                   reply_markup=reply_markup)
     elif 5000 < nearby_pizzeria["distance_to_user"] <= 20000:
-        update.message.reply_text(f'Доставка будет стоить 300 рублей.\n'
+        update.message.reply_text(f'Доставка будет стоить {up_20_km_delivery_price} рублей.\n'
                                   f'Доставляем или самовывоз?',
                                   reply_markup=reply_markup)
     else:
@@ -180,26 +184,36 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
 
 
 def get_address_or_delivery(bot, update):
-
     users_reply = update.message.text
-    print(users_reply)
     chat_id = update.message.chat_id
     lat, lon = get_user_location(bot, update)
     nearby_pizzeria = get_nearby_pizzeria(lat, lon)
-    print(nearby_pizzeria)
     send_choosing_delivery(bot, update, nearby_pizzeria)
     id_customer = moltin_flow.create_customer(moltin_access_token, 'Customer_Address', users_reply, str(chat_id), lat, lon)
-    print(id_customer['data']['id'])
     db.set(str(chat_id) + '_id_customer', id_customer['data']['id'])
     return 'WAITING_ADDRESS'
 
 
 def wait_address(bot, update):
-    pprint(update)
     query = update.callback_query
-    print(query.data)
     if query.data == 'Доставка':
-        bot.send_message(chat_id=query.message.chat_id, text='Доставка')
+        chat_id = update.callback_query.message.chat_id
+        id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
+        customer_lat, customer_lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
+        nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon)
+        courier_id = nearby_pizzeria['courier']
+
+        bot.send_message(chat_id=courier_id, text=f'Доставить этот заказ вот сюда:')
+        bot_cart.send_cart_courier(bot, update, moltin_access_token, courier_id)
+        bot.send_location(chat_id=courier_id, latitude=customer_lat, longitude=customer_lon)
+
+        bot.send_message(chat_id=chat_id,
+                         text=f'Курьер получил ваш заказ!\n'
+                              f'До новых встреч!\n'
+                              f'Для возврата в начало магазина нажмите /start')
+        moltin_cart.clean_cart(moltin_access_token, chat_id)
+
+        print('finish')
 
     elif query.data == 'Самовывоз':
         chat_id = update.callback_query.message.chat_id
@@ -212,7 +226,6 @@ def wait_address(bot, update):
                               f'До новых встреч!\n'
                               f'Для возврата в начало магазина нажмите /start')
         moltin_cart.clean_cart(moltin_access_token, chat_id)
-
 
 
 def send_mail(bot, update, access_token, products):
