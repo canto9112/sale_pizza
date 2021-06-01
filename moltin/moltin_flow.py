@@ -15,11 +15,9 @@ def create_flow(token, name, slug, descriptions):
     }}
 
     response = requests.post('https://api.moltin.com/v2/flows', headers=headers, json=data)
-    pprint(response.json())
     response.raise_for_status()
     flow_id = response.json()['data']['id']
-    flow_slug = response.json()['data']['slug']
-    return flow_id, flow_slug
+    return flow_id
 
 
 def get_flow_id(token):
@@ -68,7 +66,7 @@ def create_fields(token, name, slug, field_type, description,  flow_id):
     return response.json()
 
 
-def create_entry(token, flow_slug, address, alias, lat, lon):
+def create_entry(token, flow_slug, address, alias, lat, lon, courier_id):
     headers = {'Authorization': f'Bearer {token}',
                'Content-Type': 'application/json'}
     data = {"data": {
@@ -76,7 +74,8 @@ def create_entry(token, flow_slug, address, alias, lat, lon):
         "address": address,
         "alias": alias,
         "longitude": lon,
-        "latitude": lat
+        "latitude": lat,
+        "courier": courier_id
     }}
 
     response = requests.post(f'https://api.moltin.com/v2/flows/{flow_slug}/entries', headers=headers, json=data)
@@ -97,7 +96,7 @@ def create_customer(token, flow_slug, address, alias, lat, lon):
 
     response = requests.post(f'https://api.moltin.com/v2/flows/{flow_slug}/entries', headers=headers, json=data)
     response.raise_for_status()
-    return response.json()['data']['id']
+    return response.json()
 
 
 def get_all_entries(token, flow_slug):
@@ -118,5 +117,3 @@ def get_entry(token, flow_slug, entry_id):
     lat = response.json()['data']['latitude']
     lon = response.json()['data']['longitude']
     return lat, lon
-
-
