@@ -212,6 +212,8 @@ def wait_address(bot, update):
                               f'До новых встреч!\n'
                               f'Для возврата в начало магазина нажмите /start')
         moltin_cart.clean_cart(moltin_access_token, chat_id)
+        seconds = 3
+        job_3_seconds = job_queue.run_once(send_message_if_didnt_arrive, seconds)
 
         print('finish')
 
@@ -226,6 +228,11 @@ def wait_address(bot, update):
                               f'До новых встреч!\n'
                               f'Для возврата в начало магазина нажмите /start')
         moltin_cart.clean_cart(moltin_access_token, chat_id)
+
+
+def send_message_if_didnt_arrive(bot, job):
+    bot.send_message(chat_id=335031317, text='Приятного аппетита!\n'
+                     'Если пицца не пришла, заказ бесплатно!')
 
 
 def send_mail(bot, update, access_token, products):
@@ -327,6 +334,7 @@ if __name__ == '__main__':
     moltin_access_token = moltin_authentication.get_authorization_token(moltin_client_id, moltin_client_secret)
 
     updater = Updater(telegram_token)
+    job_queue = updater.job_queue
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CallbackQueryHandler(partial(handle_users_reply,
@@ -337,7 +345,8 @@ if __name__ == '__main__':
                                                                  yandex_apikey=yandex_apikey))))
     dispatcher.add_handler(CommandHandler('start', (partial(handle_users_reply,
                                                             moltin_access_token=moltin_access_token,
-                                                            yandex_apikey=yandex_apikey))))
+                                                            yandex_apikey=yandex_apikey,
+                                                            ))))
     dispatcher.add_handler(MessageHandler(Filters.location, get_address_or_delivery))
 
     updater.start_polling()
