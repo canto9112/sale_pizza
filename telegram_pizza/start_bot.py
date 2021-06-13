@@ -201,30 +201,6 @@ def send_message_if_didnt_arrive(bot, job):
                      'Если пицца не пришла, заказ бесплатно!')
 
 
-def send_mail(bot, update, access_token, products):
-    users_reply = update.message.text
-    is_valid_email = check_email(users_reply)
-    if is_valid_email:
-        username = update.message['chat']['first_name']
-        moltin_customer.create_customer(access_token, username, users_reply)
-        update.message.reply_text(f'Мы записали ваш заказ!\n'
-                                  f'Информация о заказе придет на - {users_reply}\n\n'
-                                  f'Ждем вас снова за покупками!')
-        moltin_cart.clean_cart(access_token, update.message['chat']['id'])
-        time.sleep(2.0)
-        start(bot, update, products)
-        return 'HANDLE_MENU'
-
-    update.message.reply_text(f'Неправильно указана почта!\n'
-                              f'Введите почту еще раз: ')
-    return 'WAITING_EMAIL'
-
-
-def check_email(email):
-    is_valid = validate_email(email)
-    return is_valid
-
-
 def handle_description(bot, update, products, access_token):
     query = update.callback_query
     button, product_id = query.data.split('/')
