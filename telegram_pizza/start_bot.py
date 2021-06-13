@@ -205,7 +205,7 @@ def send_message_if_didnt_arrive(bot, job):
                      'Если пицца не пришла, заказ бесплатно!')
 
 
-def handle_users_reply(bot, update):
+def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
     products = moltin_product.get_all_products(moltin_access_token)
     if update.message:
         user_reply = update.message.text
@@ -222,7 +222,7 @@ def handle_users_reply(bot, update):
 
     states_functions = {
         'START': partial(start, products=products),
-        'HANDLE_MENU': partial(handle_button_menu, moltin_access_token),
+        'HANDLE_MENU': partial(handle_button_menu, access_token=moltin_access_token),
         'HANDLE_DESCRIPTION': partial(handle_description, products=products, access_token=moltin_access_token),
         'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
         'WAITING_LOC': get_address_or_delivery,
