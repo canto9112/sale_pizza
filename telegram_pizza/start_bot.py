@@ -8,7 +8,7 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageH
 from validate_email import validate_email
 
 from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_product, moltin_customer, moltin_flow
-from telegram_pizza import bot_cart
+from telegram_pizza import bot_cart, distance_user
 from pprint import pprint
 from telegram_bot_pagination import InlineKeyboardPaginator
 import requests
@@ -98,49 +98,11 @@ def get_cart(bot, update, products, access_token):
         return "HANDLE_CART"
 
 
-def get_user_location(bot, update):
-    message = update.message['text']
-    if message is None:
-        message = update.message
-        lat, lon = (message.location.latitude, message.location.longitude)
-    else:
-        places = fetch_coordinates(message, yandex_apikey)
-        found_places = places['response']['GeoObjectCollection']['featureMember']
-        if found_places:
-            most_relevant = found_places[0]
-            lon, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
-        else:
-            update.message.reply_text('Не можем определить ваш адрес\n'
-                                      'Попробуйте еще раз!')
-            return "WAITING_LOC"
-    return lat, lon
-    # nearby_pizzeria = get_nearby_pizzeria(lat, lon)
-    # send_choosing_delivery(bot, update, nearby_pizzeria)
-    # return "WAITING_ADDRESS_OR_DELIVERY"
-
-
-def fetch_coordinates(place, apikey):
-    base_url = "https://geocode-maps.yandex.ru/1.x"
-    params = {"geocode": place,
-              "apikey": apikey,
-              "format": "json"}
-    response = requests.get(base_url, params=params)
-    response.raise_for_status()
-    return response.json()
-
-
-def get_distance(lat_pizzeria, lon_pizzeria, lat_user, lon_user):
-    pizzeria_location = (lat_pizzeria, lon_pizzeria)
-    user_location = (lat_user, lon_user)
-    distance_user = distance.distance(pizzeria_location, user_location).m
-    return int(distance_user)
-
-
 def get_nearby_pizzeria(lat, lon):
     all_entries = moltin_flow.get_all_entries(moltin_access_token, 'pizzerias')
     all_pizzerias = []
     for entries in all_entries:
-        dist = get_distance(entries['latitude'], entries['longitude'], lat, lon)
+        dist = distance_user.get_distance(entries['latitude'], entries['longitude'], lat, lon)
         all_pizzerias.append({'address': entries['address'],
                               'lat': entries['latitude'],
                               'lon': entries['longitude'],
@@ -186,7 +148,9 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
 def get_address_or_delivery(bot, update):
     users_reply = update.message.text
     chat_id = update.message.chat_id
-    lat, lon = get_user_location(bot, update)
+    lat, lon = distance_user.get_user_location(bot, update)
+    # lat, lon = get_user_location(bot, update)
+
     nearby_pizzeria = get_nearby_pizzeria(lat, lon)
     send_choosing_delivery(bot, update, nearby_pizzeria)
     id_customer = moltin_flow.create_customer(moltin_access_token, 'Customer_Address', users_reply, str(chat_id), lat, lon)
@@ -218,10 +182,12 @@ def wait_address(bot, update):
         print('finish')
 
     elif query.data == 'Самовывоз':
+
         chat_id = update.callback_query.message.chat_id
         id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
         lat, lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
         nearby_pizzeria = get_nearby_pizzeria(lat, lon)
+
         bot.send_message(chat_id=query.message.chat_id,
                          text=f'Вот адрес ближайшей пиццерии: \n'
                               f'{nearby_pizzeria["address"]}\n'
