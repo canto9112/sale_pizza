@@ -242,7 +242,6 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         'HANDLE_MENU': partial(handle_button_menu, products=products, access_token=moltin_access_token),
         'HANDLE_DESCRIPTION': partial(handle_description, products=products, access_token=moltin_access_token),
         'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
-        'WAITING_EMAIL': partial(send_mail, access_token=moltin_access_token, products=products),
         'WAITING_LOC': get_address_or_delivery,
         'WAITING_ADDRESS': wait_address
     }
