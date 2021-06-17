@@ -1,14 +1,26 @@
 from functools import partial
+from telegram import (LabeledPrice, ShippingOption)
 
 import redis
 from environs import Env
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
-from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageHandler, Updater
+from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageHandler, Updater, ShippingQueryHandler, PreCheckoutQueryHandler
 
 from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_flow, moltin_product
-from telegram_pizza import bot_cart, distance_user
-
+from telegram_pizza import bot_cart, distance_user, payments
+import logging
 id_customer = None
+
+# Enable logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+
+def error(bot, update, error):
+    """Log Errors caused by Updates."""
+    logger.warning('Update "%s" caused error "%s"', update, error)
 
 
 def split(arr, size):
@@ -82,17 +94,19 @@ def handle_description(bot, update, products, access_token):
 
 def get_cart(bot, update, products, access_token):
     query = update.callback_query
-    if query.data == 'Меню':
+    button, total_price = query.data.split('/')
+    chat_id = query.message.chat_id
+    if button == 'Меню':
         del_old_message(bot, update)
         keyboard = start_keyboard(products)
         reply_markup = InlineKeyboardMarkup(keyboard)
-        bot.send_message(chat_id=query.message.chat_id, text='Please choose:', reply_markup=reply_markup)
+        bot.send_message(chat_id=chat_id, text='Please choose:', reply_markup=reply_markup)
         return 'HANDLE_MENU'
 
-    elif query.data == 'Оплатить':
-
-        bot.send_message(chat_id=query.message.chat_id, text='Пришлтите вашу геолокацию')
+    elif button == 'Оплатить':
+        payments.start_with_shipping_callback(bot, update, chat_id, total_price)
         return "WAITING_LOC"
+
         # bot.send_message(chat_id=query.message.chat_id, text='Введите вашу почту для связи:')
         # return "WAITING_EMAIL"
 
@@ -251,6 +265,43 @@ def del_old_message(bot, update):
                        message_id=old_message)
 
 
+# def shipping_callback(bot, update):
+#     query = update.shipping_query
+#     # check the payload, is this from your bot?
+#     if query.invoice_payload != 'Custom-Payload':
+#         # answer False pre_checkout_query
+#         bot.answer_shipping_query(shipping_query_id=query.id, ok=False,
+#                                   error_message="Something went wrong...")
+#         return
+#     else:
+#         options = list()
+#         # a single LabeledPrice
+#         options.append(ShippingOption('1', 'Shipping Option A', [LabeledPrice('A', 100)]))
+#         # an array of LabeledPrice objects
+#         price_list = [LabeledPrice('B1', 150), LabeledPrice('B2', 200)]
+#         options.append(ShippingOption('2', 'Shipping Option B', price_list))
+#         bot.answer_shipping_query(shipping_query_id=query.id, ok=True,
+#                                   shipping_options=options)
+#
+#
+# def precheckout_callback(bot, update):
+#     query = update.pre_checkout_query
+#     # check the payload, is this from your bot?
+#     if query.invoice_payload != 'Custom-Payload':
+#         # answer False pre_checkout_query
+#         bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=False,
+#                                       error_message="Something went wrong...")
+#     else:
+#         bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=True)
+#
+#
+# def successful_payment_callback(bot, update):
+#
+#     # do something after successful receive of payment?
+#     update.message.reply_text("Thank you for your payment!\n"
+#                               "Пришлтите вашу геолокацию")
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
@@ -280,4 +331,8 @@ if __name__ == '__main__':
                                                             ))))
     dispatcher.add_handler(MessageHandler(Filters.location, get_address_or_delivery))
 
+    dispatcher.add_handler(ShippingQueryHandler(payments.shipping_callback))
+    dispatcher.add_handler(PreCheckoutQueryHandler(payments.precheckout_callback))
+    dispatcher.add_handler(MessageHandler(Filters.successful_payment, payments.successful_payment_callback))
+    dispatcher.add_error_handler(error)
     updater.start_polling()
