@@ -9,17 +9,16 @@ from telegram_pizza import start_bot
 def update_cart(bot, update, access_token):
     query = update.callback_query
 
-    button_menu = [InlineKeyboardButton("Меню", callback_data="Меню")]
-    button_pay = [InlineKeyboardButton("Оплатить", callback_data="Оплатить")]
-
     cart_items = moltin_cart.get_cart_items(access_token, query.message.chat_id)
     cart = moltin_cart.get_cart(access_token, query.message.chat_id)
     total_price = cart['data']['meta']['display_price']['with_tax']['formatted']
 
+    button_menu = [InlineKeyboardButton("Меню", callback_data=f"Меню/{''}")]
+    button_pay = [InlineKeyboardButton(f"Оплатить {total_price} руб.", callback_data=f"Оплатить/{total_price}")]
+
     products_in_cart = []
     keyboard = []
     for product_in_cart in cart_items['data']:
-
         product_name = product_in_cart['name']
         description = product_in_cart['description']
         price = product_in_cart['meta']['display_price']['with_tax']['unit']['formatted']
