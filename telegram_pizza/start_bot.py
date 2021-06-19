@@ -56,6 +56,7 @@ def handle_button_menu(bot, update, access_token):
     currency = product['data']['price'][0]['currency']
     description = product['data']['description']
     file_id = product['data']['relationships']['main_image']['data']['id']
+
     keyboard = [[InlineKeyboardButton(f"Положить в корзину {product_name}", callback_data=f'{product_name}/{query.data}', )],
                 [InlineKeyboardButton("Меню", callback_data=f'{"Меню"}/{query.data}')],
                 [InlineKeyboardButton("Корзина", callback_data=f'{"Корзина"}/{query.data}')]]
@@ -73,7 +74,7 @@ def handle_button_menu(bot, update, access_token):
 def handle_description(bot, update, products, access_token):
     query = update.callback_query
     button, product_id = query.data.split('/')
-
+    print(button, product_id)
     if button == 'Меню':
         del_old_message(bot, update)
         keyboard = start_keyboard(products)
@@ -103,7 +104,8 @@ def get_cart(bot, update, products, access_token):
         return 'HANDLE_MENU'
 
     elif button == 'Оплатить':
-        payments.start_with_shipping_callback(bot, update, chat_id, total_price)
+        bot.send_message(chat_id=query.message.chat_id, text='Введите адрес доставки: ')
+        # payments.start_with_shipping_callback(bot, update, chat_id, total_price)
         return "WAITING_LOC"
 
     elif query.data:
@@ -124,38 +126,69 @@ def get_address_or_delivery(bot, update):
     return 'WAITING_ADDRESS'
 
 
-def wait_address(bot, update):
+def wait_address(bot, update, access_token):
     query = update.callback_query
+    button, delivery_price = query.data.split('/')
+    chat_id = update.callback_query.message.chat_id
+    id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
+    customer_lat, customer_lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
+    nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon)
 
-    if query.data == 'Доставка':
-        chat_id = update.callback_query.message.chat_id
-        id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
-        customer_lat, customer_lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
-        nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon)
-        courier_id = nearby_pizzeria['courier']
+    if button == 'Доставка':
+        cart_items = moltin_cart.get_cart_items(access_token, query.message.chat_id)
+        cart = moltin_cart.get_cart(access_token, query.message.chat_id)
+        total_price = cart['data']['meta']['display_price']['with_tax']['formatted']
+        new_total = total_price.replace(' ', '')
 
-        bot.send_message(chat_id=courier_id, text=f'Доставить этот заказ вот сюда:')
-        bot_cart.send_cart_courier(bot, update, moltin_access_token, courier_id)
-        bot.send_location(chat_id=courier_id, latitude=customer_lat, longitude=customer_lon)
-        bot.send_message(chat_id=chat_id, text=f'Курьер получил ваш заказ!\n'
-                                               f'До новых встреч!\n'
-                                               f'Для возврата в начало магазина нажмите /start')
-        moltin_cart.clean_cart(moltin_access_token, chat_id)
-        wait_time = 3
-        job_queue.run_once(send_message_if_didnt_arrive, wait_time)
+        # del_old_message(bot, update)
+        payments.start_with_shipping_callback(bot, update, chat_id, int(new_total) + int(delivery_price))
+        return 'WAITING_PAYMENTS'
+        #
+        # courier_id = nearby_pizzeria['courier']
+        # bot.send_message(chat_id=courier_id, text=f'Доставить этот заказ вот сюда:')
+        # bot_cart.send_cart_courier(bot, update, moltin_access_token, courier_id)
+        # bot.send_location(chat_id=courier_id, latitude=customer_lat, longitude=customer_lon)
+        # bot.send_message(chat_id=chat_id, text=f'Курьер получил ваш заказ!\n'
+        #                                        f'До новых встреч!\n'
+        #                                        f'Для возврата в начало магазина нажмите /start')
+        # moltin_cart.clean_cart(moltin_access_token, chat_id)
+        # wait_time = 3
+        # job_queue.run_once(send_message_if_didnt_arrive, wait_time)
 
-    elif query.data == 'Самовывоз':
-        chat_id = update.callback_query.message.chat_id
-        id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
-        lat, lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
-        nearby_pizzeria = get_nearby_pizzeria(lat, lon)
-
+    elif button == 'Самовывоз':
+        nearby_pizzeria_lat = nearby_pizzeria['lat']
+        nearby_pizzeria_lon = nearby_pizzeria['lon']
         bot.send_message(chat_id=query.message.chat_id,
                          text=f'Вот адрес ближайшей пиццерии: \n'
                               f'{nearby_pizzeria["address"]}\n'
                               f'До новых встреч!\n'
                               f'Для возврата в начало магазина нажмите /start')
+        bot.send_location(chat_id=chat_id, latitude=nearby_pizzeria_lat, longitude=nearby_pizzeria_lon)
         moltin_cart.clean_cart(moltin_access_token, chat_id)
+
+
+def successful_payment_callback(bot, update):
+    update.message.reply_text("Спасибо за оплату!")
+    send_message_courier(bot, update)
+    return 'SEND_MESSAGE_COURIER'
+
+
+def send_message_courier(bot, update):
+    chat_id = update.message.chat_id
+    id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
+    customer_lat, customer_lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
+    nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon)
+    courier_id = nearby_pizzeria['courier']
+    bot.send_message(chat_id=courier_id, text=f'Доставить этот заказ вот сюда:')
+    bot_cart.send_cart_courier(bot, update, moltin_access_token, courier_id)
+    bot.send_location(chat_id=courier_id, latitude=customer_lat, longitude=customer_lon)
+    bot.send_message(chat_id=chat_id, text=f'Курьер получил ваш заказ!\n'
+                                           f'До новых встреч!\n'
+                                           f'Для возврата в начало магазина нажмите /start')
+    moltin_cart.clean_cart(moltin_access_token, chat_id)
+    wait_time = 3
+    job_queue.run_once(send_message_if_didnt_arrive, wait_time)
+    return 'FINISH'
 
 
 def get_nearby_pizzeria(lat, lon):
@@ -179,26 +212,34 @@ def get_nearby_pizzeria(lat, lon):
 def send_choosing_delivery(bot, update, nearby_pizzeria):
     up_5_km_delivery_price = 100
     up_20_km_delivery_price = 300
-
     keyboard = [
-        [InlineKeyboardButton('Доставка', callback_data='Доставка')],
-        [InlineKeyboardButton("Самовывоз", callback_data='Самовывоз')]
+        [InlineKeyboardButton('Доставка', callback_data=f'Доставка/{""}')],
+        [InlineKeyboardButton("Самовывоз", callback_data=f'Самовывоз/{""}')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     if nearby_pizzeria["distance_to_user"] <= 500:
         update.message.reply_text(f'Вы можете забрать пиццу самостоятельно по адресу:\n'
                                   f'{nearby_pizzeria["address"]}.\n'
-                                  f'Или заказать бесплатную доставку',
-                                  reply_markup=reply_markup)
+                                  f'Или заказать бесплатную доставку', reply_markup=reply_markup)
+
     elif 500 < nearby_pizzeria["distance_to_user"] <= 5000:
+        keyboard = [
+            [InlineKeyboardButton('Доставка', callback_data=f'Доставка/{up_5_km_delivery_price}')],
+            [InlineKeyboardButton("Самовывоз", callback_data='Самовывоз')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         update.message.reply_text(f'Доставка будет стоить {up_5_km_delivery_price} рублей.\n'
-                                  f'Доставляем или самовывоз?',
-                                  reply_markup=reply_markup)
+                                  f'Доставляем или самовывоз?', reply_markup=reply_markup)
+
     elif 5000 < nearby_pizzeria["distance_to_user"] <= 20000:
+        keyboard = [
+            [InlineKeyboardButton('Доставка', callback_data=f'Доставка/{up_20_km_delivery_price}')],
+            [InlineKeyboardButton("Самовывоз", callback_data='Самовывоз')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         update.message.reply_text(f'Доставка будет стоить {up_20_km_delivery_price} рублей.\n'
-                                  f'Доставляем или самовывоз?',
-                                  reply_markup=reply_markup)
+                                  f'Доставляем или самовывоз?', reply_markup=reply_markup)
     else:
         update.message.reply_text(f'Слишком далеко\n'
                                   f'Ближайшая пиццерия аж в {int(nearby_pizzeria["distance_to_user"] / 1000)} км\n',
@@ -231,7 +272,11 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         'HANDLE_DESCRIPTION': partial(handle_description, products=products, access_token=moltin_access_token),
         'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
         'WAITING_LOC': get_address_or_delivery,
-        'WAITING_ADDRESS': wait_address
+        'WAITING_ADDRESS': partial(wait_address, access_token=moltin_access_token),
+        'WAITING_PAYMENTS': payments.start_with_shipping_callback,
+        'SEND_MESSAGE_COURIER': send_message_courier,
+        'FINISH': 'FINISH'
+
     }
     state_handler = states_functions[user_state]
     next_state = state_handler(bot, update)
@@ -285,6 +330,6 @@ if __name__ == '__main__':
 
     dispatcher.add_handler(ShippingQueryHandler(payments.shipping_callback))
     dispatcher.add_handler(PreCheckoutQueryHandler(payments.precheckout_callback))
-    dispatcher.add_handler(MessageHandler(Filters.successful_payment, payments.successful_payment_callback))
+    dispatcher.add_handler(MessageHandler(Filters.successful_payment, successful_payment_callback))
     dispatcher.add_error_handler(error)
     updater.start_polling()
