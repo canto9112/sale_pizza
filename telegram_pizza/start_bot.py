@@ -1,17 +1,17 @@
+import logging
 from functools import partial
-from telegram import (LabeledPrice, ShippingOption)
 
 import redis
 from environs import Env
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
-from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageHandler, Updater, ShippingQueryHandler, PreCheckoutQueryHandler
+from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageHandler, PreCheckoutQueryHandler, \
+    ShippingQueryHandler, Updater
 
 from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_flow, moltin_product
 from telegram_pizza import bot_cart, distance_user, payments
-import logging
+
 id_customer = None
 
-# Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 def error(bot, update, error):
-    """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
@@ -107,9 +106,6 @@ def get_cart(bot, update, products, access_token):
         payments.start_with_shipping_callback(bot, update, chat_id, total_price)
         return "WAITING_LOC"
 
-        # bot.send_message(chat_id=query.message.chat_id, text='Введите вашу почту для связи:')
-        # return "WAITING_EMAIL"
-
     elif query.data:
         moltin_cart.delete_product_in_cart(access_token, query.message.chat_id, query.data)
         bot_cart.update_cart(bot, update, access_token)
@@ -120,7 +116,6 @@ def get_address_or_delivery(bot, update):
     users_reply = update.message.text
     chat_id = update.message.chat_id
     lat, lon = distance_user.get_user_location(bot, update)
-    # lat, lon = get_user_location(bot, update)
 
     nearby_pizzeria = get_nearby_pizzeria(lat, lon)
     send_choosing_delivery(bot, update, nearby_pizzeria)
@@ -131,6 +126,7 @@ def get_address_or_delivery(bot, update):
 
 def wait_address(bot, update):
     query = update.callback_query
+
     if query.data == 'Доставка':
         chat_id = update.callback_query.message.chat_id
         id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
@@ -141,19 +137,14 @@ def wait_address(bot, update):
         bot.send_message(chat_id=courier_id, text=f'Доставить этот заказ вот сюда:')
         bot_cart.send_cart_courier(bot, update, moltin_access_token, courier_id)
         bot.send_location(chat_id=courier_id, latitude=customer_lat, longitude=customer_lon)
-
-        bot.send_message(chat_id=chat_id,
-                         text=f'Курьер получил ваш заказ!\n'
-                              f'До новых встреч!\n'
-                              f'Для возврата в начало магазина нажмите /start')
+        bot.send_message(chat_id=chat_id, text=f'Курьер получил ваш заказ!\n'
+                                               f'До новых встреч!\n'
+                                               f'Для возврата в начало магазина нажмите /start')
         moltin_cart.clean_cart(moltin_access_token, chat_id)
-        seconds = 3
-        job_3_seconds = job_queue.run_once(send_message_if_didnt_arrive, seconds)
-
-        print('finish')
+        wait_time = 3
+        job_queue.run_once(send_message_if_didnt_arrive, wait_time)
 
     elif query.data == 'Самовывоз':
-
         chat_id = update.callback_query.message.chat_id
         id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
         lat, lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
@@ -243,7 +234,6 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         'WAITING_ADDRESS': wait_address
     }
     state_handler = states_functions[user_state]
-
     next_state = state_handler(bot, update)
     db.set(chat_id, next_state)
 
@@ -265,43 +255,6 @@ def del_old_message(bot, update):
                        message_id=old_message)
 
 
-# def shipping_callback(bot, update):
-#     query = update.shipping_query
-#     # check the payload, is this from your bot?
-#     if query.invoice_payload != 'Custom-Payload':
-#         # answer False pre_checkout_query
-#         bot.answer_shipping_query(shipping_query_id=query.id, ok=False,
-#                                   error_message="Something went wrong...")
-#         return
-#     else:
-#         options = list()
-#         # a single LabeledPrice
-#         options.append(ShippingOption('1', 'Shipping Option A', [LabeledPrice('A', 100)]))
-#         # an array of LabeledPrice objects
-#         price_list = [LabeledPrice('B1', 150), LabeledPrice('B2', 200)]
-#         options.append(ShippingOption('2', 'Shipping Option B', price_list))
-#         bot.answer_shipping_query(shipping_query_id=query.id, ok=True,
-#                                   shipping_options=options)
-#
-#
-# def precheckout_callback(bot, update):
-#     query = update.pre_checkout_query
-#     # check the payload, is this from your bot?
-#     if query.invoice_payload != 'Custom-Payload':
-#         # answer False pre_checkout_query
-#         bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=False,
-#                                       error_message="Something went wrong...")
-#     else:
-#         bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=True)
-#
-#
-# def successful_payment_callback(bot, update):
-#
-#     # do something after successful receive of payment?
-#     update.message.reply_text("Thank you for your payment!\n"
-#                               "Пришлтите вашу геолокацию")
-
-
 if __name__ == '__main__':
     env = Env()
     env.read_env()
@@ -312,7 +265,6 @@ if __name__ == '__main__':
     moltin_client_id = env('MOLTIN_CLIENT_ID')
     moltin_client_secret = env('MOLTIN_CLIENT_SECRET')
     yandex_apikey = env('YANDEX_APIKEY')
-
     moltin_access_token = moltin_authentication.get_authorization_token(moltin_client_id, moltin_client_secret)
 
     updater = Updater(telegram_token)
