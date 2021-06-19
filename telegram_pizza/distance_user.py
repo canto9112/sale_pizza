@@ -42,6 +42,3 @@ def get_user_location(bot, update):
                                       'Попробуйте еще раз!')
             return "WAITING_LOC"
     return lat, lon
-    # nearby_pizzeria = get_nearby_pizzeria(lat, lon)
-    # send_choosing_delivery(bot, update, nearby_pizzeria)
-    # return "WAITING_ADDRESS_OR_DELIVERY"
