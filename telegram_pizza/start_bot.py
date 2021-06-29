@@ -44,7 +44,7 @@ def start(bot, update, products):
 
 def start_keyboard(products):
     keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
-    split(keyboard, 8)
+    new_keyboard = split(keyboard, 8)
     return keyboard
 
 
@@ -74,7 +74,6 @@ def handle_button_menu(bot, update, access_token):
 def handle_description(bot, update, products, access_token):
     query = update.callback_query
     button, product_id = query.data.split('/')
-    print(button, product_id)
     if button == 'Меню':
         del_old_message(bot, update)
         keyboard = start_keyboard(products)
@@ -95,6 +94,7 @@ def handle_description(bot, update, products, access_token):
 def get_cart(bot, update, products, access_token):
     query = update.callback_query
     button, total_price = query.data.split('/')
+    print(button)
     chat_id = query.message.chat_id
     if button == 'Меню':
         del_old_message(bot, update)
@@ -108,8 +108,8 @@ def get_cart(bot, update, products, access_token):
         # payments.start_with_shipping_callback(bot, update, chat_id, total_price)
         return "WAITING_LOC"
 
-    elif query.data:
-        moltin_cart.delete_product_in_cart(access_token, query.message.chat_id, query.data)
+    else:
+        moltin_cart.delete_product_in_cart(access_token, query.message.chat_id, button)
         bot_cart.update_cart(bot, update, access_token)
         return "HANDLE_CART"
 
@@ -118,10 +118,22 @@ def get_address_or_delivery(bot, update):
     users_reply = update.message.text
     chat_id = update.message.chat_id
     lat, lon = distance_user.get_user_location(bot, update)
-
     nearby_pizzeria = get_nearby_pizzeria(lat, lon)
     send_choosing_delivery(bot, update, nearby_pizzeria)
-    id_customer = moltin_flow.create_customer(moltin_access_token, 'Customer_Address', users_reply, str(chat_id), lat, lon)
+    if users_reply is None:
+        address = distance_user.get_address_from_coords(f'{lon} {lat}')
+        print(address)
+        id_customer = moltin_flow.create_customer(moltin_access_token,
+                                                  'Customer_Address',
+                                                  address,
+                                                  str(chat_id),
+                                                  lat, lon)
+    else:
+        id_customer = moltin_flow.create_customer(moltin_access_token,
+                                                  'Customer_Address',
+                                                  users_reply,
+                                                  str(chat_id),
+                                                  lat, lon)
     db.set(str(chat_id) + '_id_customer', id_customer['data']['id'])
     return 'WAITING_ADDRESS'
 
@@ -229,8 +241,8 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
                                   f'Доставляем или самовывоз?', reply_markup=reply_markup)
     else:
         update.message.reply_text(f'Слишком далеко\n'
-                                  f'Ближайшая пиццерия аж в {int(nearby_pizzeria["distance_to_user"] / 1000)} км\n',
-                                  reply_markup=reply_markup)
+                                  f'Ближайшая пиццерия аж в {int(nearby_pizzeria["distance_to_user"] / 1000)} км\n'
+                                  f'Для возврата в начало магазина нажмите /start')
 
 
 def send_message_if_didnt_arrive(bot, job):
