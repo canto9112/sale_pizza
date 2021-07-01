@@ -12,6 +12,9 @@ from telegram_pizza import bot_cart, distance_user, payments
 from pprint import pprint
 
 id_customer = None
+page = 0
+back_button = InlineKeyboardButton("⏪ Назад", callback_data="Назад")
+next_button = InlineKeyboardButton("Вперед ⏩", callback_data="Вперед")
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -23,7 +26,7 @@ def error(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
-def split(arr, size):
+def splits(arr, size):
     arrs = []
     while len(arr) > size:
         pice = arr[:size]
@@ -33,20 +36,87 @@ def split(arr, size):
     return arrs
 
 
-def start(bot, update, products):
-    menu = start_keyboard(products)
-    buttons = [InlineKeyboardButton("Назад", callback_data="Назад"),
-               InlineKeyboardButton("Вперед", callback_data="Вперед")]
+def start_keyboard(products, page):
+    keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
+    new_keyboard = splits(keyboard, 8)
+    return new_keyboard[page]
+
+
+# def start(bot, update, products):
+#     menu = start_keyboard(products)
+#     buttons = [InlineKeyboardButton("Назад", callback_data="Назад"),
+#                InlineKeyboardButton("Вперед", callback_data="Вперед")]
+#     menu.append(buttons)
+#     reply_markup = InlineKeyboardMarkup(menu)
+#     update.message.reply_text('Выберите пиццу:', reply_markup=reply_markup)
+#     return "HANDLE_MENU"
+
+
+def first_page(bot, update, products):
+    chat_id = update.message.chat_id
+    menu = start_keyboard(products, page)
+    buttons = [next_button]
     menu.append(buttons)
     reply_markup = InlineKeyboardMarkup(menu)
     update.message.reply_text('Выберите пиццу:', reply_markup=reply_markup)
-    return "HANDLE_MENU"
+    db.set(str(chat_id) + '_page', page)
+    return "PAGE_SELECTION"
 
 
-def start_keyboard(products):
-    keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
-    new_keyboard = split(keyboard, 8)
-    return keyboard
+def page_selection(bot, update, products):
+    query = update.callback_query
+    chat_id = query.message.chat_id
+    page_number = db.get(str(chat_id) + '_page').decode("utf-8")
+
+    if query.data == 'Вперед':
+        new_page = int(page_number) + 1
+        menu = start_keyboard(products, new_page)
+
+        if len(menu) < 8:
+            buttons = [back_button]
+            menu.append(buttons)
+            reply_markup = InlineKeyboardMarkup(menu)
+            del_old_message(bot, update)
+            bot.send_message(chat_id=query.message.chat_id, text='Выберите пиццу:', reply_markup=reply_markup)
+            db.set(str(chat_id) + '_page', new_page)
+            return "PAGE_SELECTION"
+
+        buttons = [back_button, next_button]
+        menu.append(buttons)
+        reply_markup = InlineKeyboardMarkup(menu)
+        del_old_message(bot, update)
+        bot.send_message(chat_id=query.message.chat_id, text='Выберите пиццу:', reply_markup=reply_markup)
+        db.set(str(chat_id) + '_page', new_page)
+        return "PAGE_SELECTION"
+
+    elif query.data == 'Назад':
+        new_page = int(page_number) - 1
+        menu = start_keyboard(products, new_page)
+
+        if new_page == 0:
+            buttons = [next_button]
+            menu.append(buttons)
+            reply_markup = InlineKeyboardMarkup(menu)
+            del_old_message(bot, update)
+            bot.send_message(chat_id=query.message.chat_id, text='Выберите пиццу:', reply_markup=reply_markup)
+            db.set(str(chat_id) + '_page', new_page)
+            return "PAGE_SELECTION"
+
+        buttons = [back_button, next_button]
+        menu.append(buttons)
+        reply_markup = InlineKeyboardMarkup(menu)
+        del_old_message(bot, update)
+        bot.send_message(chat_id=query.message.chat_id, text='Выберите пиццу:', reply_markup=reply_markup)
+        db.set(str(chat_id) + '_page', new_page)
+        return "PAGE_SELECTION"
+    else:
+        return "HANDLE_MENU"
+
+
+# def start_keyboard(products):
+#     keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
+#     new_keyboard = split(keyboard, 8)
+#     return keyboard
 
 
 def handle_button_menu(bot, update, access_token):
@@ -272,7 +342,8 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         user_state = db.get(chat_id).decode("utf-8")
 
     states_functions = {
-        'START': partial(start, products=products),
+        'START': partial(first_page, products=products),
+        "PAGE_SELECTION": partial(page_selection, products=products),
         'HANDLE_MENU': partial(handle_button_menu, access_token=moltin_access_token),
         'HANDLE_DESCRIPTION': partial(handle_description, products=products, access_token=moltin_access_token),
         'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
