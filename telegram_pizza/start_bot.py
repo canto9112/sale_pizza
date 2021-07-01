@@ -9,6 +9,7 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageH
 
 from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_flow, moltin_product
 from telegram_pizza import bot_cart, distance_user, payments
+from pprint import pprint
 
 id_customer = None
 
@@ -106,7 +107,7 @@ def get_cart(bot, update, products, access_token):
     elif button == 'Оплатить':
         bot.send_message(chat_id=query.message.chat_id, text='Введите адрес доставки: ')
         # payments.start_with_shipping_callback(bot, update, chat_id, total_price)
-        return "WAITING_LOC"
+        return "WAITING_ADDRESS"
 
     else:
         moltin_cart.delete_product_in_cart(access_token, query.message.chat_id, button)
@@ -114,20 +115,21 @@ def get_cart(bot, update, products, access_token):
         return "HANDLE_CART"
 
 
-def get_address_or_delivery(bot, update):
+def waiting_address(bot, update, access_token):
     users_reply = update.message.text
     chat_id = update.message.chat_id
     lat, lon = distance_user.get_user_location(bot, update)
-    nearby_pizzeria = get_nearby_pizzeria(lat, lon)
-    send_choosing_delivery(bot, update, nearby_pizzeria)
+
     if users_reply is None:
         address = distance_user.get_address_from_coords(f'{lon} {lat}')
-        print(address)
         id_customer = moltin_flow.create_customer(moltin_access_token,
                                                   'Customer_Address',
                                                   address,
                                                   str(chat_id),
                                                   lat, lon)
+        db.set(str(chat_id) + '_id_customer', id_customer['data']['id'])
+        db.set(chat_id, "ADDRESS_OR_DELIVERY")
+
     else:
         id_customer = moltin_flow.create_customer(moltin_access_token,
                                                   'Customer_Address',
@@ -135,11 +137,14 @@ def get_address_or_delivery(bot, update):
                                                   str(chat_id),
                                                   lat, lon)
     db.set(str(chat_id) + '_id_customer', id_customer['data']['id'])
-    return 'WAITING_ADDRESS'
+    nearby_pizzeria = get_nearby_pizzeria(lat, lon)
+    send_choosing_delivery(bot, update, nearby_pizzeria, access_token)
+    return "ADDRESS_OR_DELIVERY"
 
 
-def wait_address(bot, update, access_token):
+def get_address_or_delivery(bot, update, access_token):
     query = update.callback_query
+    print(query)
     button, delivery_price = query.data.split('/')
     chat_id = update.callback_query.message.chat_id
     id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
@@ -208,16 +213,16 @@ def get_nearby_pizzeria(lat, lon):
     return nearby_pizzeria
 
 
-def send_choosing_delivery(bot, update, nearby_pizzeria):
+def send_choosing_delivery(bot, update, nearby_pizzeria, access_token):
     up_5_km_delivery_price = 100
     up_20_km_delivery_price = 300
-    keyboard = [
-        [InlineKeyboardButton('Доставка', callback_data=f'Доставка/{""}')],
-        [InlineKeyboardButton("Самовывоз", callback_data=f'Самовывоз/{""}')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
 
     if nearby_pizzeria["distance_to_user"] <= 500:
+        keyboard = [
+            [InlineKeyboardButton('Доставка', callback_data=f'Доставка/{""}')],
+            [InlineKeyboardButton("Самовывоз", callback_data=f'Самовывоз/{""}')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         update.message.reply_text(f'Вы можете забрать пиццу самостоятельно по адресу:\n'
                                   f'{nearby_pizzeria["address"]}.\n'
                                   f'Или заказать бесплатную доставку', reply_markup=reply_markup)
@@ -252,6 +257,7 @@ def send_message_if_didnt_arrive(bot, job):
 
 def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
     products = moltin_product.get_all_products(moltin_access_token)
+
     if update.message:
         user_reply = update.message.text
         chat_id = update.message.chat_id
@@ -270,8 +276,8 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         'HANDLE_MENU': partial(handle_button_menu, access_token=moltin_access_token),
         'HANDLE_DESCRIPTION': partial(handle_description, products=products, access_token=moltin_access_token),
         'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
-        'WAITING_LOC': get_address_or_delivery,
-        'WAITING_ADDRESS': partial(wait_address, access_token=moltin_access_token),
+        'WAITING_ADDRESS': partial(waiting_address, access_token=moltin_access_token),
+        'ADDRESS_OR_DELIVERY': partial(get_address_or_delivery, access_token=moltin_access_token),
         'WAITING_PAYMENTS': payments.start_with_shipping_callback,
         'SEND_MESSAGE_COURIER': send_message_courier,
         'FINISH': 'FINISH'
@@ -325,7 +331,7 @@ if __name__ == '__main__':
                                                             moltin_access_token=moltin_access_token,
                                                             yandex_apikey=yandex_apikey,
                                                             ))))
-    dispatcher.add_handler(MessageHandler(Filters.location, get_address_or_delivery))
+    dispatcher.add_handler(MessageHandler(Filters.location, partial(waiting_address, access_token=moltin_access_token)))
 
     dispatcher.add_handler(ShippingQueryHandler(payments.shipping_callback))
     dispatcher.add_handler(PreCheckoutQueryHandler(payments.precheckout_callback))
