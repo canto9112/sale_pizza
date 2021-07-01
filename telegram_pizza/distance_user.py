@@ -25,6 +25,24 @@ def fetch_coordinates(place, apikey):
     return response.json()
 
 
+def get_address_from_coords(coords):
+    base_url = "https://geocode-maps.yandex.ru/1.x"
+    params = {
+        "apikey": yandex_apikey,
+        "format": "json",
+        "lang": "ru_RU",
+        "kind": "house",
+        "geocode": coords
+    }
+    try:
+        response = requests.get(base_url, params=params)
+        json_data = response.json()
+        address = json_data["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]["metaDataProperty"]["GeocoderMetaData"]["AddressDetails"]["Country"]["AddressLine"]
+        return address
+    except Exception as e:
+        return "error"
+
+
 def get_user_location(bot, update):
 
     message = update.message['text']
