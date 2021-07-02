@@ -197,7 +197,7 @@ def waiting_address(bot, update, access_token):
                                                   lat, lon)
     db.set(str(chat_id) + '_id_customer', id_customer['data']['id'])
     nearby_pizzeria = get_nearby_pizzeria(lat, lon)
-    send_choosing_delivery(bot, update, nearby_pizzeria, access_token)
+    send_choosing_delivery(bot, update, nearby_pizzeria)
     return "ADDRESS_OR_DELIVERY"
 
 
@@ -272,7 +272,7 @@ def get_nearby_pizzeria(lat, lon):
     return nearby_pizzeria
 
 
-def send_choosing_delivery(bot, update, nearby_pizzeria, access_token):
+def send_choosing_delivery(bot, update, nearby_pizzeria):
     up_5_km_delivery_price = 100
     up_20_km_delivery_price = 300
 
