@@ -238,7 +238,7 @@ def successful_payment_callback(bot, update):
 
 def send_message_courier(bot, update):
     chat_id = update.message.chat_id
-    id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
+    db.get(str(chat_id) + '_id_customer').decode("utf-8")
     customer_lat, customer_lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
     nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon)
     courier_id = nearby_pizzeria['courier']
