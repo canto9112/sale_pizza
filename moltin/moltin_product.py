@@ -43,4 +43,3 @@ def get_all_products(token):
     response.raise_for_status()
     response = response.json()
     return response['data']
-

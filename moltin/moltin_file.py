@@ -36,4 +36,3 @@ def get_image_url(token, file_id):
     response = requests.get(f'https://api.moltin.com/v2/files/{file_id}', headers=headers)
     response.raise_for_status()
     return response.json()['data']['link']['href']
-
