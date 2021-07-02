@@ -310,12 +310,11 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
 
 
 def send_message_if_didnt_arrive(bot, job):
-
     bot.send_message(chat_id=335031317, text='Приятного аппетита!\n'
                      'Если пицца не пришла, заказ бесплатно!')
 
 
-def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
+def handle_users_reply(bot, update, moltin_access_token):
     products = moltin_product.get_all_products(moltin_access_token)
 
     if update.message:
@@ -375,7 +374,6 @@ if __name__ == '__main__':
     telegram_token = env("TELEGRAM_TOKEN")
     moltin_client_id = env('MOLTIN_CLIENT_ID')
     moltin_client_secret = env('MOLTIN_CLIENT_SECRET')
-    yandex_apikey = env('YANDEX_APIKEY')
     moltin_access_token = moltin_authentication.get_authorization_token(moltin_client_id, moltin_client_secret)
 
     updater = Updater(telegram_token)
@@ -383,19 +381,16 @@ if __name__ == '__main__':
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CallbackQueryHandler(partial(handle_users_reply,
-                                                        moltin_access_token=moltin_access_token,
-                                                        yandex_apikey=yandex_apikey)))
-    dispatcher.add_handler(MessageHandler(Filters.text, (partial(handle_users_reply,
-                                                                 moltin_access_token=moltin_access_token,
-                                                                 yandex_apikey=yandex_apikey))))
-    dispatcher.add_handler(CommandHandler('start', (partial(handle_users_reply,
-                                                            moltin_access_token=moltin_access_token,
-                                                            yandex_apikey=yandex_apikey,
-                                                            ))))
-    dispatcher.add_handler(MessageHandler(Filters.location, partial(waiting_address, access_token=moltin_access_token)))
-
+                                                        moltin_access_token=moltin_access_token)))
+    dispatcher.add_handler(MessageHandler(Filters.text, partial(handle_users_reply,
+                                                                moltin_access_token=moltin_access_token)))
+    dispatcher.add_handler(MessageHandler(Filters.location, partial(waiting_address,
+                                                                    access_token=moltin_access_token)))
+    dispatcher.add_handler(CommandHandler('start', partial(handle_users_reply,
+                                                           moltin_access_token=moltin_access_token)))
     dispatcher.add_handler(ShippingQueryHandler(payments.shipping_callback))
     dispatcher.add_handler(PreCheckoutQueryHandler(payments.precheckout_callback))
     dispatcher.add_handler(MessageHandler(Filters.successful_payment, successful_payment_callback))
+
     dispatcher.add_error_handler(error)
     updater.start_polling()
