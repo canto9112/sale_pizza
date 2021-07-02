@@ -12,6 +12,7 @@ from telegram_pizza import bot_cart, distance_user, payments
 
 id_customer = None
 page = 0
+MENU_LEN = 8
 back_button = InlineKeyboardButton("⏪ Назад", callback_data="Назад")
 next_button = InlineKeyboardButton("Вперед ⏩", callback_data="Вперед")
 
@@ -37,7 +38,7 @@ def splits(arr, size):
 
 def start_keyboard(products, page):
     keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
-    new_keyboard = splits(keyboard, 8)
+    new_keyboard = splits(keyboard, MENU_LEN)
     return new_keyboard[page]
 
 
@@ -61,7 +62,7 @@ def page_selection(bot, update, products):
         new_page = int(page_number) + 1
         menu = start_keyboard(products, new_page)
 
-        if len(menu) < 8:
+        if len(menu) < MENU_LEN:
             buttons = [back_button]
             menu.append(buttons)
             reply_markup = InlineKeyboardMarkup(menu)
