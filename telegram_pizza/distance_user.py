@@ -44,7 +44,6 @@ def get_address_from_coords(coords):
 
 
 def get_user_location(bot, update):
-
     message = update.message['text']
     if message is None:
         message = update.message
