@@ -216,7 +216,6 @@ def get_address_or_delivery(bot, update, access_token):
 
     if button == 'Доставка':
         payments.start_with_shipping_callback(bot, update, chat_id, int(new_total) + int(delivery_price))
-        return 'WAITING_PAYMENTS'
 
     elif button == 'Самовывоз':
         nearby_pizzeria_lat = nearby_pizzeria['lat']
@@ -228,7 +227,7 @@ def get_address_or_delivery(bot, update, access_token):
                               f'Для возврата в начало магазина нажмите /start')
         bot.send_location(chat_id=chat_id, latitude=nearby_pizzeria_lat, longitude=nearby_pizzeria_lon)
         payments.start_with_shipping_callback(bot, update, chat_id, int(new_total))
-        return 'WAITING_PAYMENTS'
+    return 'WAITING_PAYMENTS'
 
 
 def successful_payment_callback(bot, update):
