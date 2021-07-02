@@ -9,7 +9,6 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageH
 
 from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_flow, moltin_product
 from telegram_pizza import bot_cart, distance_user, payments
-from pprint import pprint
 
 id_customer = None
 page = 0
@@ -40,16 +39,6 @@ def start_keyboard(products, page):
     keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
     new_keyboard = splits(keyboard, 8)
     return new_keyboard[page]
-
-
-# def start(bot, update, products):
-#     menu = start_keyboard(products)
-#     buttons = [InlineKeyboardButton("Назад", callback_data="Назад"),
-#                InlineKeyboardButton("Вперед", callback_data="Вперед")]
-#     menu.append(buttons)
-#     reply_markup = InlineKeyboardMarkup(menu)
-#     update.message.reply_text('Выберите пиццу:', reply_markup=reply_markup)
-#     return "HANDLE_MENU"
 
 
 def first_page(bot, update, products):
@@ -113,12 +102,6 @@ def page_selection(bot, update, products):
         return "HANDLE_MENU"
 
 
-# def start_keyboard(products):
-#     keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
-#     new_keyboard = split(keyboard, 8)
-#     return keyboard
-
-
 def handle_button_menu(bot, update, access_token):
     query = update.callback_query
     product = moltin_product.get_product(access_token, query.data)
@@ -144,13 +127,18 @@ def handle_button_menu(bot, update, access_token):
 
 def handle_description(bot, update, products, access_token):
     query = update.callback_query
+    chat_id = query.message.chat_id
     button, product_id = query.data.split('/')
+
     if button == 'Меню':
         del_old_message(bot, update)
-        keyboard = start_keyboard(products)
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        page_number = db.get(str(chat_id) + '_page').decode("utf-8")
+        menu = start_keyboard(products, int(page_number))
+        buttons = [next_button]
+        menu.append(buttons)
+        reply_markup = InlineKeyboardMarkup(menu)
         bot.send_message(chat_id=query.message.chat_id, text='Please choose:', reply_markup=reply_markup)
-        return 'HANDLE_MENU'
+        return "PAGE_SELECTION"
 
     elif button == 'Корзина':
         bot_cart.update_cart(bot, update, access_token)
@@ -165,18 +153,19 @@ def handle_description(bot, update, products, access_token):
 def get_cart(bot, update, products, access_token):
     query = update.callback_query
     button, total_price = query.data.split('/')
-    print(button)
     chat_id = query.message.chat_id
     if button == 'Меню':
         del_old_message(bot, update)
-        keyboard = start_keyboard(products)
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        bot.send_message(chat_id=chat_id, text='Please choose:', reply_markup=reply_markup)
-        return 'HANDLE_MENU'
+        page_number = db.get(str(chat_id) + '_page').decode("utf-8")
+        menu = start_keyboard(products, int(page_number))
+        buttons = [next_button]
+        menu.append(buttons)
+        reply_markup = InlineKeyboardMarkup(menu)
+        bot.send_message(chat_id=query.message.chat_id, text='Please choose:', reply_markup=reply_markup)
+        return "PAGE_SELECTION"
 
     elif button == 'Оплатить':
         bot.send_message(chat_id=query.message.chat_id, text='Введите адрес доставки: ')
-        # payments.start_with_shipping_callback(bot, update, chat_id, total_price)
         return "WAITING_ADDRESS"
 
     else:
@@ -217,14 +206,14 @@ def get_address_or_delivery(bot, update, access_token):
     print(query)
     button, delivery_price = query.data.split('/')
     chat_id = update.callback_query.message.chat_id
-    id_customer = db.get(str(chat_id) + '_id_customer').decode("utf-8")
-    customer_lat, customer_lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
+    customer_id = db.get(str(chat_id) + '_id_customer').decode("utf-8")
+    customer_lat, customer_lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', customer_id)
     nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon)
     cart = moltin_cart.get_cart(access_token, query.message.chat_id)
     total_price = cart['data']['meta']['display_price']['with_tax']['formatted']
     new_total = total_price.replace(' ', '')
+
     if button == 'Доставка':
-        # del_old_message(bot, update)
         payments.start_with_shipping_callback(bot, update, chat_id, int(new_total) + int(delivery_price))
         return 'WAITING_PAYMENTS'
 
@@ -321,6 +310,7 @@ def send_choosing_delivery(bot, update, nearby_pizzeria, access_token):
 
 
 def send_message_if_didnt_arrive(bot, job):
+
     bot.send_message(chat_id=335031317, text='Приятного аппетита!\n'
                      'Если пицца не пришла, заказ бесплатно!')
 
