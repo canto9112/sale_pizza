@@ -175,7 +175,7 @@ def get_cart(bot, update, products, access_token):
         return "HANDLE_CART"
 
 
-def waiting_address(bot, update, access_token):
+def waiting_address(bot, update):
     users_reply = update.message.text
     chat_id = update.message.chat_id
     lat, lon = distance_user.get_user_location(bot, update)
@@ -338,7 +338,7 @@ def handle_users_reply(bot, update, moltin_access_token, yandex_apikey):
         'HANDLE_MENU': partial(handle_button_menu, access_token=moltin_access_token),
         'HANDLE_DESCRIPTION': partial(handle_description, products=products, access_token=moltin_access_token),
         'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
-        'WAITING_ADDRESS': partial(waiting_address, access_token=moltin_access_token),
+        'WAITING_ADDRESS': waiting_address,
         'ADDRESS_OR_DELIVERY': partial(get_address_or_delivery, access_token=moltin_access_token),
         'WAITING_PAYMENTS': payments.start_with_shipping_callback,
         'SEND_MESSAGE_COURIER': send_message_courier,
