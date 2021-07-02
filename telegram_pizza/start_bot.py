@@ -182,21 +182,21 @@ def waiting_address(bot, update, access_token):
 
     if users_reply is None:
         address = distance_user.get_address_from_coords(f'{lon} {lat}')
-        id_customer = moltin_flow.create_customer(moltin_access_token,
+        customer_id = moltin_flow.create_customer(moltin_access_token,
                                                   'Customer_Address',
                                                   address,
                                                   str(chat_id),
                                                   lat, lon)
-        db.set(str(chat_id) + '_id_customer', id_customer['data']['id'])
+        db.set(str(chat_id) + '_id_customer', customer_id['data']['id'])
         db.set(chat_id, "ADDRESS_OR_DELIVERY")
 
     else:
-        id_customer = moltin_flow.create_customer(moltin_access_token,
+        customer_id = moltin_flow.create_customer(moltin_access_token,
                                                   'Customer_Address',
                                                   users_reply,
                                                   str(chat_id),
                                                   lat, lon)
-    db.set(str(chat_id) + '_id_customer', id_customer['data']['id'])
+    db.set(str(chat_id) + '_id_customer', customer_id['data']['id'])
     nearby_pizzeria = get_nearby_pizzeria(lat, lon)
     send_choosing_delivery(bot, update, nearby_pizzeria)
     return "ADDRESS_OR_DELIVERY"
