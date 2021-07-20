@@ -5,10 +5,11 @@ def start_with_shipping_callback(bot, update, chat_id, price):
     title = "Магазин sale pizza"
     description = "Payment Example using python-telegram-bot"
     payload = "Custom-Payload"
-    provider_token = "410694247:TEST:c2b00d7e-a3d5-4e64-9c0f-48d8da055fa9"
+    provider_token = "410694247:TEST:9bd1333c-460f-4b4a-bc5a-5364e0c6da99"
     start_parameter = "test-payment"
     currency = "RUB"
     prices = [LabeledPrice("Test", price * 100)]
+    print(prices)
     bot.sendInvoice(chat_id, title, description, payload,
                     provider_token, start_parameter, currency, prices)
 

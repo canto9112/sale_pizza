@@ -167,6 +167,7 @@ def get_cart(bot, update, products, access_token):
 
     elif button == 'Оплатить':
         bot.send_message(chat_id=query.message.chat_id, text='Введите адрес доставки: ')
+
         return "WAITING_ADDRESS"
 
     else:
@@ -175,14 +176,15 @@ def get_cart(bot, update, products, access_token):
         return "HANDLE_CART"
 
 
-def waiting_address(bot, update):
+def waiting_address(bot, update, access_token):
     users_reply = update.message.text
     chat_id = update.message.chat_id
     lat, lon = distance_user.get_user_location(bot, update)
+    print(lat, lon)
 
     if users_reply is None:
         address = distance_user.get_address_from_coords(f'{lon} {lat}')
-        customer_id = moltin_flow.create_customer(moltin_access_token,
+        customer_id = moltin_flow.create_customer(access_token,
                                                   'Customer_Address',
                                                   address,
                                                   str(chat_id),
@@ -191,7 +193,7 @@ def waiting_address(bot, update):
         db.set(chat_id, "ADDRESS_OR_DELIVERY")
 
     else:
-        customer_id = moltin_flow.create_customer(moltin_access_token,
+        customer_id = moltin_flow.create_customer(access_token,
                                                   'Customer_Address',
                                                   users_reply,
                                                   str(chat_id),
@@ -215,7 +217,10 @@ def get_address_or_delivery(bot, update, access_token):
     new_total = total_price.replace(' ', '')
 
     if button == 'Доставка':
-        payments.start_with_shipping_callback(bot, update, chat_id, int(new_total) + int(delivery_price))
+        price = int(new_total) + int(delivery_price)
+        print(price)
+        # payments.start_with_shipping_callback(bot, update, chat_id, int(new_total))
+        payments.start_with_shipping_callback(bot, update, chat_id, price)
 
     elif button == 'Самовывоз':
         nearby_pizzeria_lat = nearby_pizzeria['lat']
@@ -227,7 +232,7 @@ def get_address_or_delivery(bot, update, access_token):
                               f'Для возврата в начало магазина нажмите /start')
         bot.send_location(chat_id=chat_id, latitude=nearby_pizzeria_lat, longitude=nearby_pizzeria_lon)
         payments.start_with_shipping_callback(bot, update, chat_id, int(new_total))
-    return 'WAITING_PAYMENTS'
+    return 'SEND_MESSAGE_COURIER'
 
 
 def successful_payment_callback(bot, update):
@@ -238,8 +243,9 @@ def successful_payment_callback(bot, update):
 
 def send_message_courier(bot, update):
     chat_id = update.message.chat_id
-    db.get(str(chat_id) + '_id_customer').decode("utf-8")
-    customer_lat, customer_lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer)
+    id_customer2 = db.get(str(chat_id) + '_id_customer').decode("utf-8")
+    customer_lat, customer_lon = moltin_flow.get_entry(moltin_access_token, 'Customer_Address', id_customer2)
+    print(customer_lon, customer_lon)
     nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon)
     courier_id = nearby_pizzeria['courier']
     bot.send_message(chat_id=courier_id, text=f'Доставить этот заказ вот сюда:')
@@ -336,7 +342,7 @@ def handle_users_reply(bot, update, moltin_access_token):
         'HANDLE_MENU': partial(handle_button_menu, access_token=moltin_access_token),
         'HANDLE_DESCRIPTION': partial(handle_description, products=products, access_token=moltin_access_token),
         'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
-        'WAITING_ADDRESS': waiting_address,
+        'WAITING_ADDRESS': partial(waiting_address, access_token=moltin_access_token),
         'ADDRESS_OR_DELIVERY': partial(get_address_or_delivery, access_token=moltin_access_token),
         'WAITING_PAYMENTS': payments.start_with_shipping_callback,
         'SEND_MESSAGE_COURIER': send_message_courier,
