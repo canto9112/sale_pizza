@@ -1,5 +1,4 @@
 import requests
-from pprint import pprint
 
 
 def create_flow(token, name, slug, descriptions):
@@ -113,6 +112,7 @@ def get_entry(token, flow_slug, entry_id):
                'Content-Type': 'application/json'}
 
     response = requests.get(f'https://api.moltin.com/v2/flows/{flow_slug}/entries/{entry_id}', headers=headers)
+    print(response.json())
     response.raise_for_status()
     lat = response.json()['data']['latitude']
     lon = response.json()['data']['longitude']
