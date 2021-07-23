@@ -53,7 +53,7 @@ def first_page(bot, update, products):
     return "PAGE_SELECTION"
 
 
-def page_selection(bot, update, products):
+def page_selection(bot, update, products, access_token):
     query = update.callback_query
     chat_id = query.message.chat_id
     page_number = db.get(str(chat_id) + '_page').decode("utf-8")
@@ -100,7 +100,8 @@ def page_selection(bot, update, products):
         db.set(str(chat_id) + '_page', new_page)
         return "PAGE_SELECTION"
     else:
-        return "HANDLE_MENU"
+        handle_button_menu(bot, update, access_token)
+        return "HANDLE_DESCRIPTION"
 
 
 def handle_button_menu(bot, update, access_token):
@@ -338,7 +339,7 @@ def handle_users_reply(bot, update, moltin_access_token):
 
     states_functions = {
         'START': partial(first_page, products=products),
-        "PAGE_SELECTION": partial(page_selection, products=products),
+        "PAGE_SELECTION": partial(page_selection, products=products, access_token=moltin_access_token),
         'HANDLE_MENU': partial(handle_button_menu, access_token=moltin_access_token),
         'HANDLE_DESCRIPTION': partial(handle_description, products=products, access_token=moltin_access_token),
         'HANDLE_CART': partial(get_cart, products=products, access_token=moltin_access_token),
