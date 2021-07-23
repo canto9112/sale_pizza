@@ -54,10 +54,15 @@ pip3 install -r requirements.txt
 3. Добавить валюту (RUB) в [настройках](https://dashboard.elasticpath.com/app/settings):
    
     3.1 Нажать кнопку - ```New currency```;
+   
     3.2 Code (Required) = ```RUB```;
-    3.3 Exchange Rate (Required) = 
+   
+    3.3 Exchange Rate (Required) = 10;
+   
     3.4 Format (Required) = ```{price}```;
+   
     3.5 Decimal Point (Required) = ```.``` (точка);
+   
     3.6 Thousand Separator (Required) = ``` ``` (пробел)
 
 #### Настройки для базы данных (Redis)
