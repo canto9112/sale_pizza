@@ -1,4 +1,5 @@
 import requests
+from pprint import pprint
 
 
 def get_cart(token, cart_name):
