@@ -9,7 +9,7 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageH
     ShippingQueryHandler, Updater
 
 from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_flow, moltin_product
-from telegram_pizza import bot_cart, distance_user, payments
+from tg_bot import bot_cart, distance_user, payments
 
 id_customer = None
 page = 0
