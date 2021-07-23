@@ -1,6 +1,6 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 
-from moltin import moltin_cart
+from moltin_shop import moltin_cart
 from tg_bot import start_bot
 
 

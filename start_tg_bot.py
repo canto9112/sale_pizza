@@ -8,7 +8,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageHandler, PreCheckoutQueryHandler, \
     ShippingQueryHandler, Updater
 
-from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_flow, moltin_product
+from moltin_shop import moltin_authentication, moltin_cart, moltin_file, moltin_flow, moltin_product
 from tg_bot import bot_cart, distance_user, payments
 
 id_customer = None
