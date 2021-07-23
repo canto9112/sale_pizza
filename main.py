@@ -10,6 +10,7 @@ import moltin.moltin_file
 import moltin.moltin_flow
 from moltin.moltin_authentication import get_authorization_token
 from moltin.moltin_product import get_product_id
+import settings
 
 
 def get_json(json_file):
@@ -111,29 +112,21 @@ if __name__ == '__main__':
     moltin_access_token = get_authorization_token(moltin_client_id, moltin_client_secret)
     courier_id = env('COURIER_ID')
 
-    pizzerias_flow_name = 'Pizzerias'
-    pizzerias_flow_slug = 'Pizzerias_flow'
-    pizzerias_flow_description = 'Пиццерии'
-
-    customer_flow_name = 'Customer_Address'
-    customer_flow_slug = 'Customer_flow'
-    customer_flow_description = 'Покупатель'
-
     pizzerias_flow_id = moltin.moltin_flow.create_flow(moltin_access_token,
-                                                       pizzerias_flow_name,
-                                                       pizzerias_flow_slug,
-                                                       pizzerias_flow_description)
+                                                       settings.pizzerias_flow_name,
+                                                       settings.pizzerias_flow_slug,
+                                                       settings.pizzerias_flow_description)
 
     customer_flow_id = moltin.moltin_flow.create_flow(moltin_access_token,
-                                                      customer_flow_name,
-                                                      customer_flow_slug,
-                                                      customer_flow_description)
+                                                      settings.customer_flow_name,
+                                                      settings.customer_flow_slug,
+                                                      settings.customer_flow_description)
 
     add_product(moltin_access_token, images_folder)
 
     create_pizzerias_field(moltin_access_token, pizzerias_flow_id)
     create_customer_field(moltin_access_token, customer_flow_id)
-    add_entries(moltin_access_token, pizzerias_flow_slug, courier_id)
+    add_entries(moltin_access_token, settings.pizzerias_flow_slug, courier_id)
 
     # delete images
     path = os.path.join(os.path.abspath(os.path.dirname(__file__)), images_folder)
