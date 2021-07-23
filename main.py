@@ -139,6 +139,8 @@ if __name__ == '__main__':
                                                       customer_flow_slug,
                                                       customer_flow_description)
 
+    add_product(moltin_access_token, images_folder)
+
     create_pizzerias_field(moltin_access_token, pizzerias_flow_id)
     create_customer_field(moltin_access_token, customer_flow_id)
     add_entries(moltin_access_token, pizzerias_flow_slug)
@@ -149,7 +151,7 @@ if __name__ == '__main__':
     # print(min(all_pizzerias, key=get_pizzerias_distance))
     #
     #
-    # add_product(moltin_access_token, images_folder)
+
     # flow_id, flow_slug = moltin.moltin_flow.get_flow_id(moltin_access_token)
     # create_field(moltin_access_token, flow_id)
 

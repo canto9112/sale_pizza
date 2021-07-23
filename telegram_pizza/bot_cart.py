@@ -26,8 +26,8 @@ def update_cart(bot, update, access_token):
         keyboard.append(button)
         products_in_cart.append(f'{product_name}\n'
                                 f'{description}\n'
-                                f'{price}за пиццу\n'
-                                f'{quantity} штук в корзине на {all_price}\n\n')
+                                f'{price} руб. за пиццу\n'
+                                f'{quantity} шт. в корзине на {all_price} руб.\n\n')
 
     keyboard.append(button_menu)
     keyboard.append(button_pay)
