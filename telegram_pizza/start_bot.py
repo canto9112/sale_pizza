@@ -139,7 +139,7 @@ def handle_description(bot, update, products, access_token):
         buttons = [next_button]
         menu.append(buttons)
         reply_markup = InlineKeyboardMarkup(menu)
-        bot.send_message(chat_id=query.message.chat_id, text='Please choose:', reply_markup=reply_markup)
+        bot.send_message(chat_id=query.message.chat_id, text='Выберите пиццу:', reply_markup=reply_markup)
         return "PAGE_SELECTION"
 
     elif button == 'Корзина':
@@ -163,12 +163,11 @@ def get_cart(bot, update, products, access_token):
         buttons = [next_button]
         menu.append(buttons)
         reply_markup = InlineKeyboardMarkup(menu)
-        bot.send_message(chat_id=query.message.chat_id, text='Please choose:', reply_markup=reply_markup)
+        bot.send_message(chat_id=query.message.chat_id, text='Выберите пиццу:', reply_markup=reply_markup)
         return "PAGE_SELECTION"
 
     elif button == 'Оплатить':
         bot.send_message(chat_id=query.message.chat_id, text='Введите адрес доставки: ')
-
         return "WAITING_ADDRESS"
 
     else:
