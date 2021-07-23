@@ -101,7 +101,7 @@ def add_entries(token, flow_slug, courier_id):
         moltin.moltin_flow.create_entry(token, flow_slug, address, alias, lat, lon, courier_id)
 
 
-if __name__ == '__main__':
+def main():
     env = Env()
     env.read_env()
 
@@ -131,3 +131,7 @@ if __name__ == '__main__':
     # delete images
     path = os.path.join(os.path.abspath(os.path.dirname(__file__)), images_folder)
     shutil.rmtree(path)
+
+
+if __name__ == '__main__':
+    main()
