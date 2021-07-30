@@ -19,25 +19,6 @@ def create_flow(token, name, slug, descriptions):
     return flow_id
 
 
-def get_flow_id(token):
-    headers = {'Authorization': f'Bearer {token}',
-               'Content-Type': 'application/json'}
-
-    data = {'data': {
-                "type": "flow",
-                "name": 'Pizzeria',
-                "slug": 'pizzerias',
-                'description': 'Описание',
-                'enabled': True
-    }}
-
-    response = requests.post('https://api.moltin.com/v2/flows', headers=headers, json=data)
-    response.raise_for_status()
-    flow_id = response.json()['data']['id']
-    flow_slug = response.json()['data']['slug']
-    return flow_id, flow_slug
-
-
 def create_fields(token, name, slug, field_type, description,  flow_id):
     headers = {'Authorization': f'Bearer {token}',
                'Content-Type': 'application/json'}
