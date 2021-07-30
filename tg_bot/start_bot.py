@@ -11,16 +11,13 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageH
 from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_flow, moltin_product
 from tg_bot import bot_cart, distance_user, payments
 
+logger = logging.getLogger(__file__)
+
 id_customer = None
 page = 0
 MENU_LEN = 8
 back_button = InlineKeyboardButton("⏪ Назад", callback_data="Назад")
 next_button = InlineKeyboardButton("Вперед ⏩", callback_data="Вперед")
-
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-
-logger = logging.getLogger(__name__)
 
 
 def error(bot, update, error):
@@ -368,6 +365,9 @@ def del_old_message(bot, update):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        level=logging.INFO)
+
     env = Env()
     env.read_env()
 
