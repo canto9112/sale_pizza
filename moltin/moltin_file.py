@@ -16,7 +16,7 @@ def create_main_image(token, product_id, image_id):
     return response.json()
 
 
-def get_file_id(token, file_name, folder_name):
+def create_file(token, file_name, folder_name):
     headers = {
         'Authorization': f'Bearer {token}'
     }

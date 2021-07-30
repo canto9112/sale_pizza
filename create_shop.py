@@ -87,7 +87,7 @@ def add_products(token, name_folder):
         image_url = pizza['product_image']['url']
         product_id = create_product(token, name, slug, sku, description, currency, amount)
         save_image(slug, image_url, name_folder)
-        image_id = moltin.moltin_file.get_file_id(token, slug, name_folder)
+        image_id = moltin.moltin_file.create_file(token, slug, name_folder)
         moltin.moltin_file.create_main_image(token, product_id, image_id)
 
 
