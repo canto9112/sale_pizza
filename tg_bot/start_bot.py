@@ -20,7 +20,7 @@ back_button = InlineKeyboardButton("⏪ Назад", callback_data="Назад")
 next_button = InlineKeyboardButton("Вперед ⏩", callback_data="Вперед")
 
 
-def error(bot, update, error):
+def error_handler(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
@@ -394,5 +394,5 @@ if __name__ == '__main__':
     dispatcher.add_handler(PreCheckoutQueryHandler(payments.precheckout_callback))
     dispatcher.add_handler(MessageHandler(Filters.successful_payment, successful_payment_callback))
 
-    dispatcher.add_error_handler(error)
+    dispatcher.add_error_handler(error_handler)
     updater.start_polling()
