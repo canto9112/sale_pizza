@@ -36,6 +36,7 @@ def get_address_from_coords(coords):
     }
     try:
         response = requests.get(base_url, params=params)
+        response.raise_for_status()
         json_data = response.json()
         address = json_data["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]["metaDataProperty"]["GeocoderMetaData"]["AddressDetails"]["Country"]["AddressLine"]
         return address
