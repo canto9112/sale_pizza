@@ -94,6 +94,7 @@ def get_entry(token, flow_slug, entry_id):
 
     response = requests.get(f'https://api.moltin.com/v2/flows/{flow_slug}/entries/{entry_id}', headers=headers)
     response.raise_for_status()
-    lat = response.json()['data']['latitude']
-    lon = response.json()['data']['longitude']
+    response_json = response.json()
+    lat = response_json['data']['latitude']
+    lon = response_json['data']['longitude']
     return lat, lon
