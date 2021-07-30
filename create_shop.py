@@ -9,7 +9,7 @@ import json
 import moltin.moltin_file
 import moltin.moltin_flow
 from moltin.moltin_authentication import get_authorization_token
-from moltin.moltin_product import get_product_id
+from moltin.moltin_product import create_product
 import settings
 
 
@@ -85,7 +85,7 @@ def add_products(token, name_folder):
         currency = 'RUB'
         amount = pizza['price']
         image_url = pizza['product_image']['url']
-        product_id = get_product_id(token, name, slug, sku, description, currency, amount)
+        product_id = create_product(token, name, slug, sku, description, currency, amount)
         save_image(slug, image_url, name_folder)
         image_id = moltin.moltin_file.get_file_id(token, slug, name_folder)
         moltin.moltin_file.create_main_image(token, product_id, image_id)

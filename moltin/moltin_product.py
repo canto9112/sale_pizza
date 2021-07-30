@@ -1,7 +1,7 @@
 import requests
 
 
-def get_product_id(token, name, slug, sku, description, currency, amount):
+def create_product(token, name, slug, sku, description, currency, amount):
     headers = {'Authorization': f'Bearer {token}',
                'Content-Type': 'application/json'}
 
