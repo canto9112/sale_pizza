@@ -75,7 +75,7 @@ def create_customer_field(token, flow_id):
         moltin.moltin_flow.create_fields(token, field['name'], field['slug'], field['field_type'], field['description'], flow_id)
 
 
-def add_product(token, name_folder):
+def add_products(token, name_folder):
     pizzas = get_json('json/menu.json')
     for pizza in pizzas:
         name = pizza['name']
@@ -122,7 +122,7 @@ def main():
                                                       settings.customer_flow_slug,
                                                       settings.customer_flow_description)
 
-    add_product(moltin_access_token, images_folder)
+    add_products(moltin_access_token, images_folder)
 
     create_pizzerias_field(moltin_access_token, pizzerias_flow_id)
     create_customer_field(moltin_access_token, customer_flow_id)
