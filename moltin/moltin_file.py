@@ -17,12 +17,15 @@ def create_main_image(token, product_id, image_id):
 
 
 def create_file(token, file_name, folder_name):
+    with open(f'{folder_name}/{file_name}.jpg', 'rb') as file:
+        file_contents = file.read()
+
     headers = {
         'Authorization': f'Bearer {token}'
     }
     files = {
         'public': True,
-        'file': open(f'{folder_name}/{file_name}.jpg', 'rb')
+        'file': file_contents
     }
 
     response = requests.post('https://api.moltin.com/v2/files', headers=headers, files=files)
