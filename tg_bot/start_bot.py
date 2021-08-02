@@ -65,7 +65,7 @@ def first_page(bot, update, products):
 def page_selection(bot, update, products):
     query = update.callback_query
     chat_id = query.message.chat_id
-    page_number = db.get(str(chat_id) + '_page').decode("utf-8")
+    page_number = db.get(f'{chat_id}_page').decode("utf-8")
 
     if query.data == 'Вперед':
         new_page = int(page_number) + 1
@@ -77,7 +77,7 @@ def page_selection(bot, update, products):
             reply_markup = InlineKeyboardMarkup(menu)
             del_old_message(bot, update)
             bot.send_message(chat_id=query.message.chat_id, text='Выберите пиццу:', reply_markup=reply_markup)
-            db.set(str(chat_id) + '_page', new_page)
+            db.set(f'{chat_id}_page', new_page)
             return "PAGE_SELECTION"
 
         buttons = [back_button, next_button]
@@ -85,7 +85,7 @@ def page_selection(bot, update, products):
         reply_markup = InlineKeyboardMarkup(menu)
         del_old_message(bot, update)
         bot.send_message(chat_id=query.message.chat_id, text='Выберите пиццу:', reply_markup=reply_markup)
-        db.set(str(chat_id) + '_page', new_page)
+        db.set(f'{chat_id}_page', new_page)
         return "PAGE_SELECTION"
 
     elif query.data == 'Назад':
@@ -98,7 +98,7 @@ def page_selection(bot, update, products):
             reply_markup = InlineKeyboardMarkup(menu)
             del_old_message(bot, update)
             bot.send_message(chat_id=query.message.chat_id, text='Выберите пиццу:', reply_markup=reply_markup)
-            db.set(str(chat_id) + '_page', new_page)
+            db.set(f'{chat_id}_page', new_page)
             return "PAGE_SELECTION"
 
         buttons = [back_button, next_button]
@@ -106,7 +106,7 @@ def page_selection(bot, update, products):
         reply_markup = InlineKeyboardMarkup(menu)
         del_old_message(bot, update)
         bot.send_message(chat_id=query.message.chat_id, text='Выберите пиццу:', reply_markup=reply_markup)
-        db.set(str(chat_id) + '_page', new_page)
+        db.set(f'{chat_id}_page', new_page)
         return "PAGE_SELECTION"
     else:
         handle_button_menu(bot, update)
@@ -144,7 +144,7 @@ def handle_description(bot, update, products):
 
     if button == 'Меню':
         del_old_message(bot, update)
-        page_number = db.get(str(chat_id) + '_page').decode("utf-8")
+        page_number = db.get(f'{chat_id}_page').decode("utf-8")
         menu = start_keyboard(products, int(page_number))
         buttons = [next_button]
         menu.append(buttons)
@@ -168,7 +168,7 @@ def get_cart(bot, update, products):
     chat_id = query.message.chat_id
     if button == 'Меню':
         del_old_message(bot, update)
-        page_number = db.get(str(chat_id) + '_page').decode("utf-8")
+        page_number = db.get(f'{chat_id}_page').decode("utf-8")
         menu = start_keyboard(products, int(page_number))
         buttons = [next_button]
         menu.append(buttons)
@@ -198,7 +198,7 @@ def waiting_address(bot, update):
                                                   address,
                                                   str(chat_id),
                                                   lat, lon)
-        db.set(str(chat_id) + '_id_customer', customer_id['data']['id'])
+        db.set(f'{chat_id}_id_customer', customer_id['data']['id'])
         db.set(chat_id, "ADDRESS_OR_DELIVERY")
 
     else:
@@ -207,7 +207,7 @@ def waiting_address(bot, update):
                                                   users_reply,
                                                   str(chat_id),
                                                   lat, lon)
-    db.set(str(chat_id) + '_id_customer', customer_id['data']['id'])
+    db.set(f'{chat_id}_id_customer', customer_id['data']['id'])
     nearby_pizzeria = get_nearby_pizzeria(lat, lon)
     send_choosing_delivery(bot, update, nearby_pizzeria)
     return "ADDRESS_OR_DELIVERY"
@@ -217,7 +217,7 @@ def get_address_or_delivery(bot, update):
     query = update.callback_query
     button, delivery_price = query.data.split('/')
     chat_id = update.callback_query.message.chat_id
-    customer_id = db.get(str(chat_id) + '_id_customer').decode("utf-8")
+    customer_id = db.get(f'{chat_id}_id_customer').decode("utf-8")
     customer_lat, customer_lon = moltin_flow.get_entry(MOLTIN_TOKEN,
                                                        settings.customer_flow_slug, customer_id)
     nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon)
@@ -233,10 +233,8 @@ def get_address_or_delivery(bot, update):
         nearby_pizzeria_lat = nearby_pizzeria['lat']
         nearby_pizzeria_lon = nearby_pizzeria['lon']
         bot.send_message(chat_id=query.message.chat_id,
-                         text=f'Вот адрес ближайшей пиццерии: \n'
-                              f'{nearby_pizzeria["address"]}\n'
-                              f'До новых встреч!\n'
-                              f'Для возврата в начало магазина нажмите /start')
+                         text=f'''Вот адрес ближайшей пиццерии: {nearby_pizzeria["address"]}. До новых встреч!
+                         Для возврата в начало магазина нажмите /start''')
         bot.send_location(chat_id=chat_id, latitude=nearby_pizzeria_lat, longitude=nearby_pizzeria_lon)
         payments.start_with_shipping_callback(bot, update, chat_id, int(new_total))
     return 'SEND_MESSAGE_COURIER'
@@ -250,7 +248,7 @@ def successful_payment_callback(bot, update):
 
 def send_message_courier(bot, update):
     chat_id = update.message.chat_id
-    customer_id = db.get(str(chat_id) + '_id_customer').decode("utf-8")
+    customer_id = db.get(f'{chat_id}_id_customer').decode("utf-8")
     customer_lat, customer_lon = moltin_flow.get_entry(MOLTIN_TOKEN,
                                                        settings.customer_flow_slug, customer_id)
     nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon)
@@ -258,9 +256,8 @@ def send_message_courier(bot, update):
     bot.send_message(chat_id=courier_id, text=f'Доставить этот заказ вот сюда:')
     bot_cart.send_cart_courier(bot, update, MOLTIN_TOKEN, courier_id)
     bot.send_location(chat_id=courier_id, latitude=customer_lat, longitude=customer_lon)
-    bot.send_message(chat_id=chat_id, text=f'Курьер получил ваш заказ!\n'
-                                           f'До новых встреч!\n'
-                                           f'Для возврата в начало магазина нажмите /start')
+    bot.send_message(chat_id=chat_id, text=f'''Курьер получил ваш заказ! До новых встреч!
+                                               Для возврата в начало магазина нажмите /start''')
     moltin_cart.clean_cart(MOLTIN_TOKEN, chat_id)
     wait_time = 3
     job_queue.run_once(send_message_if_didnt_arrive, wait_time)
