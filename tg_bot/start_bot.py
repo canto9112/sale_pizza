@@ -35,20 +35,19 @@ def error_handler(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
-def splits(arr, size):
-    arrs = []
-    while len(arr) > size:
-        pice = arr[:size]
-        arrs.append(pice)
-        arr = arr[size:]
-    arrs.append(arr)
-    return arrs
+def shortening_menu(long_menu, size):
+    short_menu = []
+    while len(long_menu) > size:
+        short_menu.append(long_menu[:size])
+        long_menu = long_menu[size:]
+    short_menu.append(long_menu)
+    return short_menu
 
 
 def start_keyboard(products, page):
     keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
-    new_keyboard = splits(keyboard, MENU_LEN)
-    return new_keyboard[page]
+    menu = shortening_menu(keyboard, MENU_LEN)
+    return menu[page]
 
 
 def first_page(bot, update, products):
