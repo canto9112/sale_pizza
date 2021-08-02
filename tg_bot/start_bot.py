@@ -199,7 +199,6 @@ def waiting_address(bot, update):
                                                   str(chat_id),
                                                   lat, lon)
         db.set(f'{chat_id}_id_customer', customer_id['data']['id'])
-        db.set(chat_id, "ADDRESS_OR_DELIVERY")
 
     else:
         customer_id = moltin_flow.create_customer(MOLTIN_TOKEN,
