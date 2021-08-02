@@ -19,8 +19,7 @@ def get_json(json_file):
 
 
 def save_image(file_name, file_url, folder_name):
-    if not os.path.exists(folder_name):
-        os.mkdir(folder_name)
+    os.makedirs(folder_name, exist_ok=True)
     response = requests.get(file_url)
     response.raise_for_status()
 
