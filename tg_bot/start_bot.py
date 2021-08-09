@@ -23,6 +23,7 @@ TELEGRAM_TOKEN = env("TELEGRAM_TOKEN")
 MOLTIN_CLIENT_ID = env('MOLTIN_CLIENT_ID')
 MOLTIN_CLIENT_SECRET = env('MOLTIN_CLIENT_SECRET')
 MOLTIN_TOKEN = moltin_authentication.get_authorization_token(MOLTIN_CLIENT_ID, MOLTIN_CLIENT_SECRET)
+TG_CHAT_ID = env('TG_CHAT_ID')
 
 id_customer = None
 page = 0
@@ -230,9 +231,15 @@ def get_address_or_delivery(bot, update):
     elif button == 'Самовывоз':
         nearby_pizzeria_lat = nearby_pizzeria['lat']
         nearby_pizzeria_lon = nearby_pizzeria['lon']
+        text =\
+                f'''
+                Вот адрес ближайшей пиццерии: {nearby_pizzeria["address"]}.    
+                До новых встреч!
+                Для возврата в начало магазина нажмите /start
+                '''
+
         bot.send_message(chat_id=query.message.chat_id,
-                         text=f'''Вот адрес ближайшей пиццерии: {nearby_pizzeria["address"]}. До новых встреч!
-                         Для возврата в начало магазина нажмите /start''')
+                         text=text)
         bot.send_location(chat_id=chat_id, latitude=nearby_pizzeria_lat, longitude=nearby_pizzeria_lon)
         payments.start_with_shipping_callback(bot, update, chat_id, int(new_total))
     return 'SEND_MESSAGE_COURIER'
@@ -260,6 +267,11 @@ def send_message_courier(bot, update):
     wait_time = 3
     job_queue.run_once(send_message_if_didnt_arrive, wait_time)
     return 'FINISH'
+
+
+def send_message_if_didnt_arrive(bot, job):
+    bot.send_message(chat_id=TG_CHAT_ID, text='Приятного аппетита!\n'
+                                              'Если пицца не пришла, заказ бесплатно!')
 
 
 def get_nearby_pizzeria(lat, lon):
@@ -315,11 +327,6 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
         update.message.reply_text(f'Слишком далеко\n'
                                   f'Ближайшая пиццерия аж в {int(nearby_pizzeria["distance_to_user"] / 1000)} км\n'
                                   f'Для возврата в начало магазина нажмите /start')
-
-
-def send_message_if_didnt_arrive(bot, job):
-    bot.send_message(chat_id=335031317, text='Приятного аппетита!\n'
-                     'Если пицца не пришла, заказ бесплатно!')
 
 
 def handle_users_reply(bot, update):
