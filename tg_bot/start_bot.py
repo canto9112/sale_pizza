@@ -1,7 +1,7 @@
 import logging
 from functools import partial
 import settings
-
+import textwrap
 import redis
 from environs import Env
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
@@ -231,12 +231,10 @@ def get_address_or_delivery(bot, update):
     elif button == 'Самовывоз':
         nearby_pizzeria_lat = nearby_pizzeria['lat']
         nearby_pizzeria_lon = nearby_pizzeria['lon']
-        text =\
-                f'''
+        text = textwrap.dedent(f'''
                 Вот адрес ближайшей пиццерии: {nearby_pizzeria["address"]}.    
                 До новых встреч!
-                Для возврата в начало магазина нажмите /start
-                '''
+                Для возврата в начало магазина нажмите /start ''')
 
         bot.send_message(chat_id=query.message.chat_id,
                          text=text)
@@ -270,8 +268,10 @@ def send_message_courier(bot, update):
 
 
 def send_message_if_didnt_arrive(bot, job):
-    bot.send_message(chat_id=TG_CHAT_ID, text='Приятного аппетита!\n'
-                                              'Если пицца не пришла, заказ бесплатно!')
+    text = textwrap.dedent(f'''
+            Приятного аппетита!   
+            Если пицца не пришла, заказ бесплатно!''')
+    bot.send_message(chat_id=TG_CHAT_ID, text=text)
 
 
 def get_nearby_pizzeria(lat, lon):
@@ -302,9 +302,11 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
             [InlineKeyboardButton("Самовывоз", callback_data=f'Самовывоз/{""}')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text(f'Вы можете забрать пиццу самостоятельно по адресу:\n'
-                                  f'{nearby_pizzeria["address"]}.\n'
-                                  f'Или заказать бесплатную доставку', reply_markup=reply_markup)
+        text = textwrap.dedent(f'''
+                Вы можете забрать пиццу самостоятельно по адресу:.    
+                {nearby_pizzeria["address"]}.
+                Или заказать бесплатную доставку ''')
+        update.message.reply_text(text, reply_markup=reply_markup)
 
     elif 500 < nearby_pizzeria["distance_to_user"] <= 5000:
         keyboard = [
@@ -312,8 +314,10 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
             [InlineKeyboardButton("Самовывоз", callback_data=f'Самовывоз/{""}')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text(f'Доставка будет стоить {up_5_km_delivery_price} рублей.\n'
-                                  f'Доставляем или самовывоз?', reply_markup=reply_markup)
+        text = textwrap.dedent(f'''
+                Доставка будет стоить {up_5_km_delivery_price} рублей.   
+                Доставляем или самовывоз?''')
+        update.message.reply_text(text, reply_markup=reply_markup)
 
     elif 5000 < nearby_pizzeria["distance_to_user"] <= 20000:
         keyboard = [
@@ -321,12 +325,16 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
             [InlineKeyboardButton("Самовывоз", callback_data=f'Самовывоз/{""}')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text(f'Доставка будет стоить {up_20_km_delivery_price} рублей.\n'
-                                  f'Доставляем или самовывоз?', reply_markup=reply_markup)
+        text = textwrap.dedent(f'''
+                Доставка будет стоить {up_20_km_delivery_price} рублей.  
+                Доставляем или самовывоз?''')
+        update.message.reply_text(text, reply_markup=reply_markup)
     else:
-        update.message.reply_text(f'Слишком далеко\n'
-                                  f'Ближайшая пиццерия аж в {int(nearby_pizzeria["distance_to_user"] / 1000)} км\n'
-                                  f'Для возврата в начало магазина нажмите /start')
+        text = textwrap.dedent(f'''
+                Слишком далеко   
+                Ближайшая пиццерия аж в {int(nearby_pizzeria["distance_to_user"] / 1000)} км
+                Для возврата в начало магазина нажмите /start''')
+        update.message.reply_text(text)
 
 
 def handle_users_reply(bot, update):
