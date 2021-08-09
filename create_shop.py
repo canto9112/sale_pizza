@@ -9,7 +9,7 @@ import json
 import moltin.moltin_file
 import moltin.moltin_flow
 from moltin.moltin_authentication import get_authorization_token
-from moltin.moltin_product import get_product_id
+from moltin.moltin_product import create_product
 import settings
 
 
@@ -19,8 +19,7 @@ def get_json(json_file):
 
 
 def save_image(file_name, file_url, folder_name):
-    if not os.path.exists(folder_name):
-        os.mkdir(folder_name)
+    os.makedirs(folder_name, exist_ok=True)
     response = requests.get(file_url)
     response.raise_for_status()
 
@@ -75,7 +74,7 @@ def create_customer_field(token, flow_id):
         moltin.moltin_flow.create_fields(token, field['name'], field['slug'], field['field_type'], field['description'], flow_id)
 
 
-def add_product(token, name_folder):
+def add_products(token, name_folder):
     pizzas = get_json('json/menu.json')
     for pizza in pizzas:
         name = pizza['name']
@@ -85,9 +84,9 @@ def add_product(token, name_folder):
         currency = 'RUB'
         amount = pizza['price']
         image_url = pizza['product_image']['url']
-        product_id = get_product_id(token, name, slug, sku, description, currency, amount)
+        product_id = create_product(token, name, slug, sku, description, currency, amount)
         save_image(slug, image_url, name_folder)
-        image_id = moltin.moltin_file.get_file_id(token, slug, name_folder)
+        image_id = moltin.moltin_file.create_file(token, slug, name_folder)
         moltin.moltin_file.create_main_image(token, product_id, image_id)
 
 
@@ -112,25 +111,25 @@ def main():
     moltin_access_token = get_authorization_token(moltin_client_id, moltin_client_secret)
     courier_id = env('COURIER_ID')
 
-    pizzerias_flow_id = moltin.moltin_flow.create_flow(moltin_access_token,
-                                                       settings.pizzerias_flow_name,
-                                                       settings.pizzerias_flow_slug,
-                                                       settings.pizzerias_flow_description)
+    try:
+        pizzerias_flow_id = moltin.moltin_flow.create_flow(moltin_access_token,
+                                                           settings.pizzerias_flow_name,
+                                                           settings.pizzerias_flow_slug,
+                                                           settings.pizzerias_flow_description)
 
-    customer_flow_id = moltin.moltin_flow.create_flow(moltin_access_token,
-                                                      settings.customer_flow_name,
-                                                      settings.customer_flow_slug,
-                                                      settings.customer_flow_description)
+        customer_flow_id = moltin.moltin_flow.create_flow(moltin_access_token,
+                                                          settings.customer_flow_name,
+                                                          settings.customer_flow_slug,
+                                                          settings.customer_flow_description)
+        add_products(moltin_access_token, images_folder)
 
-    add_product(moltin_access_token, images_folder)
-
-    create_pizzerias_field(moltin_access_token, pizzerias_flow_id)
-    create_customer_field(moltin_access_token, customer_flow_id)
-    add_entries(moltin_access_token, settings.pizzerias_flow_slug, courier_id)
-
-    # delete images
-    path = os.path.join(os.path.abspath(os.path.dirname(__file__)), images_folder)
-    shutil.rmtree(path)
+        create_pizzerias_field(moltin_access_token, pizzerias_flow_id)
+        create_customer_field(moltin_access_token, customer_flow_id)
+        add_entries(moltin_access_token, settings.pizzerias_flow_slug, courier_id)
+    finally:
+        # delete images
+        path = os.path.join(os.path.abspath(os.path.dirname(__file__)), images_folder)
+        shutil.rmtree(path)
 
 
 if __name__ == '__main__':

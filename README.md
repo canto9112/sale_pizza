@@ -41,6 +41,10 @@ pip3 install -r requirements.txt
     ```
     COURIER_ID=335031317
     ```
+7. Вставить ID чата текущего пользователя telegram:
+   ```
+   TG_CHAT_ID=335031317
+   ```
 
 #### Настройки для CMS
 

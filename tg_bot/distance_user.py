@@ -34,13 +34,13 @@ def get_address_from_coords(coords):
         "kind": "house",
         "geocode": coords
     }
-    try:
-        response = requests.get(base_url, params=params)
-        json_data = response.json()
-        address = json_data["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]["metaDataProperty"]["GeocoderMetaData"]["AddressDetails"]["Country"]["AddressLine"]
-        return address
-    except Exception as e:
-        return "error"
+
+    response = requests.get(base_url, params=params)
+    response.raise_for_status()
+    json_data = response.json()
+    place_found = json_data['response']['GeoObjectCollection']['featureMember'][0]["GeoObject"]
+    address = place_found["metaDataProperty"]["GeocoderMetaData"]["AddressDetails"]["Country"]["AddressLine"]
+    return address
 
 
 def get_user_location(bot, update):
