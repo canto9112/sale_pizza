@@ -1,13 +1,14 @@
 import logging
-from functools import partial
-import settings
 import textwrap
+from functools import partial
+
 import redis
 from environs import Env
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CallbackQueryHandler, CommandHandler, Filters, MessageHandler, PreCheckoutQueryHandler, \
     ShippingQueryHandler, Updater
 
+import settings
 from moltin import moltin_authentication, moltin_cart, moltin_file, moltin_flow, moltin_product
 from tg_bot import bot_cart, distance_user, payments
 
