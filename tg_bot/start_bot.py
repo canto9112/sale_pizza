@@ -37,7 +37,7 @@ def error_handler(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
-def shortening_menu(long_menu, size):
+def get_short_menu(long_menu, size):
     short_menu = []
     while len(long_menu) > size:
         short_menu.append(long_menu[:size])
@@ -48,7 +48,7 @@ def shortening_menu(long_menu, size):
 
 def start_keyboard(products, page):
     keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
-    menu = shortening_menu(keyboard, MENU_LEN)
+    menu = get_short_menu(keyboard, MENU_LEN)
     return menu[page]
 
 
