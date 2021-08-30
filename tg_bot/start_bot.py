@@ -14,18 +14,6 @@ from tg_bot import bot_cart, distance_user, payments
 
 logger = logging.getLogger(__file__)
 
-env = Env()
-env.read_env()
-
-REDIS_PASSWORD = env("REDIS_PASSWORD")
-REDIS_HOST = env("REDIS_HOST")
-REDIS_PORT = env("REDIS_PORT")
-TELEGRAM_TOKEN = env("TELEGRAM_TOKEN")
-MOLTIN_CLIENT_ID = env('MOLTIN_CLIENT_ID')
-MOLTIN_CLIENT_SECRET = env('MOLTIN_CLIENT_SECRET')
-MOLTIN_TOKEN = moltin_authentication.get_authorization_token(MOLTIN_CLIENT_ID, MOLTIN_CLIENT_SECRET)
-TG_CHAT_ID = env('TG_CHAT_ID')
-
 id_customer = None
 page = 0
 MENU_LEN = 8
@@ -37,7 +25,7 @@ def error_handler(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
-def shortening_menu(long_menu, size):
+def get_short_menu(long_menu, size):
     short_menu = []
     while len(long_menu) > size:
         short_menu.append(long_menu[:size])
@@ -48,7 +36,7 @@ def shortening_menu(long_menu, size):
 
 def start_keyboard(products, page):
     keyboard = [[InlineKeyboardButton(product['name'], callback_data=product['id'])] for product in products]
-    menu = shortening_menu(keyboard, MENU_LEN)
+    menu = get_short_menu(keyboard, MENU_LEN)
     return menu[page]
 
 
@@ -199,7 +187,6 @@ def waiting_address(bot, update):
                                                   address,
                                                   str(chat_id),
                                                   lat, lon)
-        db.set(f'{chat_id}_id_customer', customer_id['data']['id'])
 
     else:
         customer_id = moltin_flow.create_customer(MOLTIN_TOKEN,
@@ -387,6 +374,18 @@ def del_old_message(bot, update):
 
 
 if __name__ == '__main__':
+    env = Env()
+    env.read_env()
+
+    REDIS_PASSWORD = env("REDIS_PASSWORD")
+    REDIS_HOST = env("REDIS_HOST")
+    REDIS_PORT = env("REDIS_PORT")
+    TELEGRAM_TOKEN = env("TELEGRAM_TOKEN")
+    MOLTIN_CLIENT_ID = env('MOLTIN_CLIENT_ID')
+    MOLTIN_CLIENT_SECRET = env('MOLTIN_CLIENT_SECRET')
+    MOLTIN_TOKEN = moltin_authentication.get_authorization_token(MOLTIN_CLIENT_ID, MOLTIN_CLIENT_SECRET)
+    TG_CHAT_ID = env('TG_CHAT_ID')
+
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         level=logging.INFO)
 
