@@ -51,7 +51,7 @@ def first_page(bot, update, products):
     return "PAGE_SELECTION"
 
 
-def page_selection(bot, update, products):
+def page_selection(bot, update, products, token):
     query = update.callback_query
     chat_id = query.message.chat_id
     page_number = db.get(f'{chat_id}_page').decode("utf-8")
@@ -98,13 +98,13 @@ def page_selection(bot, update, products):
         db.set(f'{chat_id}_page', new_page)
         return "PAGE_SELECTION"
     else:
-        handle_button_menu(bot, update)
+        handle_button_menu(bot, update, token)
         return "HANDLE_DESCRIPTION"
 
 
-def handle_button_menu(bot, update):
+def handle_button_menu(bot, update, token):
     query = update.callback_query
-    product = moltin_product.get_product(MOLTIN_TOKEN, query.data)
+    product = moltin_product.get_product(token, query.data)
     product_name = product['data']['name']
     price = product['data']['price'][0]['amount']
     currency = product['data']['price'][0]['currency']
@@ -116,7 +116,7 @@ def handle_button_menu(bot, update):
                 [InlineKeyboardButton("Меню", callback_data=f'{"Меню"}/{query.data}')],
                 [InlineKeyboardButton("Корзина", callback_data=f'{"Корзина"}/{query.data}')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    image = moltin_file.get_image_url(MOLTIN_TOKEN, file_id)
+    image = moltin_file.get_image_url(token, file_id)
     bot.send_photo(query.message.chat_id, image, caption=f"*{product_name}*\n\n"
                                                          f"*Цена*: {price} {currency}.\n"
                                                          f"*Описание*: _{description}_",
@@ -126,7 +126,7 @@ def handle_button_menu(bot, update):
     return "HANDLE_DESCRIPTION"
 
 
-def handle_description(bot, update, products):
+def handle_description(bot, update, products, token):
     query = update.callback_query
     chat_id = query.message.chat_id
     button, product_id = query.data.split('/')
@@ -142,16 +142,16 @@ def handle_description(bot, update, products):
         return "PAGE_SELECTION"
 
     elif button == 'Корзина':
-        bot_cart.update_cart(bot, update, MOLTIN_TOKEN)
+        bot_cart.update_cart(bot, update, token)
         return "HANDLE_CART"
 
     elif button:
-        moltin_cart.add_product_to_cart(MOLTIN_TOKEN, product_id, query.message.chat_id, 1)
+        moltin_cart.add_product_to_cart(token, product_id, query.message.chat_id, 1)
         update.callback_query.answer(text=f"{button} добавлена в корзину")
         return "HANDLE_DESCRIPTION"
 
 
-def get_cart(bot, update, products):
+def get_cart(bot, update, products, token):
     query = update.callback_query
     button, total_price = query.data.split('/')
     chat_id = query.message.chat_id
@@ -170,45 +170,46 @@ def get_cart(bot, update, products):
         return "WAITING_ADDRESS"
 
     else:
-        moltin_cart.delete_product_in_cart(MOLTIN_TOKEN, query.message.chat_id, button)
-        bot_cart.update_cart(bot, update, MOLTIN_TOKEN)
+        moltin_cart.delete_product_in_cart(token, query.message.chat_id, button)
+        bot_cart.update_cart(bot, update, token)
         return "HANDLE_CART"
 
 
-def waiting_address(bot, update):
+def waiting_address(bot, update, token):
     users_reply = update.message.text
+    print(users_reply)
     chat_id = update.message.chat_id
     lat, lon = distance_user.get_user_location(bot, update)
 
     if users_reply is None:
         address = distance_user.get_address_from_coords(f'{lon} {lat}')
-        customer_id = moltin_flow.create_customer(MOLTIN_TOKEN,
+        customer_id = moltin_flow.create_customer(token,
                                                   settings.customer_flow_slug,
                                                   address,
                                                   str(chat_id),
                                                   lat, lon)
 
     else:
-        customer_id = moltin_flow.create_customer(MOLTIN_TOKEN,
+        customer_id = moltin_flow.create_customer(token,
                                                   settings.customer_flow_slug,
                                                   users_reply,
                                                   str(chat_id),
                                                   lat, lon)
     db.set(f'{chat_id}_id_customer', customer_id['data']['id'])
-    nearby_pizzeria = get_nearby_pizzeria(lat, lon)
+    nearby_pizzeria = get_nearby_pizzeria(lat, lon, token)
     send_choosing_delivery(bot, update, nearby_pizzeria)
     return "ADDRESS_OR_DELIVERY"
 
 
-def get_address_or_delivery(bot, update):
+def get_address_or_delivery(bot, update, token):
     query = update.callback_query
     button, delivery_price = query.data.split('/')
     chat_id = update.callback_query.message.chat_id
     customer_id = db.get(f'{chat_id}_id_customer').decode("utf-8")
-    customer_lat, customer_lon = moltin_flow.get_entry(MOLTIN_TOKEN,
+    customer_lat, customer_lon = moltin_flow.get_entry(token,
                                                        settings.customer_flow_slug, customer_id)
-    nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon)
-    cart = moltin_cart.get_cart(MOLTIN_TOKEN, query.message.chat_id)
+    nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon, token)
+    cart = moltin_cart.get_cart(token, query.message.chat_id)
     total_price = cart['data']['meta']['display_price']['with_tax']['formatted']
     new_total = total_price.replace(' ', '')
 
@@ -231,25 +232,25 @@ def get_address_or_delivery(bot, update):
     return 'SEND_MESSAGE_COURIER'
 
 
-def successful_payment_callback(bot, update):
+def successful_payment_callback(bot, update, token):
     update.message.reply_text("Спасибо за оплату!")
-    send_message_courier(bot, update)
+    send_message_courier(bot, update, token)
     return 'SEND_MESSAGE_COURIER'
 
 
-def send_message_courier(bot, update):
+def send_message_courier(bot, update, token):
     chat_id = update.message.chat_id
     customer_id = db.get(f'{chat_id}_id_customer').decode("utf-8")
-    customer_lat, customer_lon = moltin_flow.get_entry(MOLTIN_TOKEN,
+    customer_lat, customer_lon = moltin_flow.get_entry(token,
                                                        settings.customer_flow_slug, customer_id)
-    nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon)
+    nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon, token)
     courier_id = nearby_pizzeria['courier']
     bot.send_message(chat_id=courier_id, text=f'Доставить этот заказ вот сюда:')
-    bot_cart.send_cart_courier(bot, update, MOLTIN_TOKEN, courier_id)
+    bot_cart.send_cart_courier(bot, update, token, courier_id)
     bot.send_location(chat_id=courier_id, latitude=customer_lat, longitude=customer_lon)
     bot.send_message(chat_id=chat_id, text=f'''Курьер получил ваш заказ! До новых встреч!
                                                Для возврата в начало магазина нажмите /start''')
-    moltin_cart.clean_cart(MOLTIN_TOKEN, chat_id)
+    moltin_cart.clean_cart(token, chat_id)
     wait_time = 3
     job_queue.run_once(send_message_if_didnt_arrive, wait_time)
     return 'FINISH'
@@ -262,8 +263,8 @@ def send_message_if_didnt_arrive(bot, job):
     bot.send_message(chat_id=TG_CHAT_ID, text=text)
 
 
-def get_nearby_pizzeria(lat, lon):
-    all_entries = moltin_flow.get_all_entries(MOLTIN_TOKEN, settings.pizzerias_flow_slug)
+def get_nearby_pizzeria(lat, lon, token):
+    all_entries = moltin_flow.get_all_entries(token, settings.pizzerias_flow_slug)
     all_pizzerias = []
     for entries in all_entries:
         dist = distance_user.get_distance(entries['latitude'], entries['longitude'], lat, lon)
@@ -344,14 +345,14 @@ def handle_users_reply(bot, update):
 
     states_functions = {
         'START': partial(first_page, products=products),
-        "PAGE_SELECTION": partial(page_selection, products=products),
-        'HANDLE_MENU': handle_button_menu,
-        'HANDLE_DESCRIPTION': partial(handle_description, products=products),
-        'HANDLE_CART': partial(get_cart, products=products),
-        'WAITING_ADDRESS': waiting_address,
-        'ADDRESS_OR_DELIVERY': get_address_or_delivery,
+        "PAGE_SELECTION": partial(page_selection, products=products, token=MOLTIN_TOKEN),
+        'HANDLE_MENU': partial(handle_button_menu, MOLTIN_TOKEN),
+        'HANDLE_DESCRIPTION': partial(handle_description, products=products, token=MOLTIN_TOKEN),
+        'HANDLE_CART': partial(get_cart, products=products, token=MOLTIN_TOKEN),
+        'WAITING_ADDRESS': partial(waiting_address, token=MOLTIN_TOKEN),
+        'ADDRESS_OR_DELIVERY': partial(get_address_or_delivery, token=MOLTIN_TOKEN),
         'WAITING_PAYMENTS': payments.start_with_shipping_callback,
-        'SEND_MESSAGE_COURIER': send_message_courier,
+        'SEND_MESSAGE_COURIER': partial(send_message_courier, token=MOLTIN_TOKEN),
         'FINISH': 'FINISH'
 
     }
