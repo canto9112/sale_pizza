@@ -326,6 +326,7 @@ def send_choosing_delivery(bot, update, nearby_pizzeria):
 
 
 def handle_users_reply(bot, update):
+    MOLTIN_TOKEN = moltin_authentication.get_authorization_token(MOLTIN_CLIENT_ID, MOLTIN_CLIENT_SECRET)
     products = moltin_product.get_all_products(MOLTIN_TOKEN)
 
     if update.message:
@@ -383,7 +384,7 @@ if __name__ == '__main__':
     TELEGRAM_TOKEN = env("TELEGRAM_TOKEN")
     MOLTIN_CLIENT_ID = env('MOLTIN_CLIENT_ID')
     MOLTIN_CLIENT_SECRET = env('MOLTIN_CLIENT_SECRET')
-    MOLTIN_TOKEN = moltin_authentication.get_authorization_token(MOLTIN_CLIENT_ID, MOLTIN_CLIENT_SECRET)
+
     TG_CHAT_ID = env('TG_CHAT_ID')
 
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
