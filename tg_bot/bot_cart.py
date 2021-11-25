@@ -40,6 +40,7 @@ def update_cart(bot, update, access_token):
 
 
 def send_cart_courier(bot, update, access_token, courier_id):
+    # chat_id = update.callback_query.message.chat_id
     chat_id = update.message.chat_id
     cart_items = moltin_cart.get_cart_items(access_token, chat_id)
     cart = moltin_cart.get_cart(access_token, chat_id)
