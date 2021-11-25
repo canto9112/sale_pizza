@@ -175,9 +175,9 @@ def get_cart(bot, update, products, token):
         return "HANDLE_CART"
 
 
-def waiting_address(bot, update, token):
+def waiting_address(bot, update):
+    token = moltin_authentication.get_authorization_token(MOLTIN_CLIENT_ID, MOLTIN_CLIENT_SECRET)
     users_reply = update.message.text
-    print(users_reply)
     chat_id = update.message.chat_id
     lat, lon = distance_user.get_user_location(bot, update)
 
@@ -222,8 +222,7 @@ def get_address_or_delivery(bot, update, token):
         nearby_pizzeria_lon = nearby_pizzeria['lon']
         text = textwrap.dedent(f'''
                 Вот адрес ближайшей пиццерии: {nearby_pizzeria["address"]}.    
-                До новых встреч!
-                Для возврата в начало магазина нажмите /start ''')
+                После оплаты мы начнем готовить ваш заказ. ''')
 
         bot.send_message(chat_id=query.message.chat_id,
                          text=text)
@@ -232,19 +231,25 @@ def get_address_or_delivery(bot, update, token):
     return 'SEND_MESSAGE_COURIER'
 
 
-def successful_payment_callback(bot, update, token):
-    update.message.reply_text("Спасибо за оплату!")
-    send_message_courier(bot, update, token)
+def successful_payment_callback(bot, update):
+    update.message.reply_text(f'''Спасибо за оплату!.
+До новых встреч!
+Для возврата в начало магазина нажмите /start ''')
+    send_message_courier(bot, update)
     return 'SEND_MESSAGE_COURIER'
 
 
-def send_message_courier(bot, update, token):
+def send_message_courier(bot, update):
+    token = moltin_authentication.get_authorization_token(MOLTIN_CLIENT_ID, MOLTIN_CLIENT_SECRET)
     chat_id = update.message.chat_id
+
+    # chat_id = update.callback_query.message.chat_id
     customer_id = db.get(f'{chat_id}_id_customer').decode("utf-8")
     customer_lat, customer_lon = moltin_flow.get_entry(token,
                                                        settings.customer_flow_slug, customer_id)
     nearby_pizzeria = get_nearby_pizzeria(customer_lat, customer_lon, token)
-    courier_id = nearby_pizzeria['courier']
+    # courier_id = nearby_pizzeria['courier']
+    courier_id = 2056634649
     bot.send_message(chat_id=courier_id, text=f'Доставить этот заказ вот сюда:')
     bot_cart.send_cart_courier(bot, update, token, courier_id)
     bot.send_location(chat_id=courier_id, latitude=customer_lat, longitude=customer_lon)
@@ -349,7 +354,7 @@ def handle_users_reply(bot, update):
         'HANDLE_MENU': partial(handle_button_menu, MOLTIN_TOKEN),
         'HANDLE_DESCRIPTION': partial(handle_description, products=products, token=MOLTIN_TOKEN),
         'HANDLE_CART': partial(get_cart, products=products, token=MOLTIN_TOKEN),
-        'WAITING_ADDRESS': partial(waiting_address, token=MOLTIN_TOKEN),
+        'WAITING_ADDRESS': waiting_address,
         'ADDRESS_OR_DELIVERY': partial(get_address_or_delivery, token=MOLTIN_TOKEN),
         'WAITING_PAYMENTS': payments.start_with_shipping_callback,
         'SEND_MESSAGE_COURIER': partial(send_message_courier, token=MOLTIN_TOKEN),

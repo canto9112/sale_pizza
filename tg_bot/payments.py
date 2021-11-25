@@ -1,5 +1,6 @@
-from telegram import (LabeledPrice, ShippingOption)
+from telegram import (LabeledPrice, ShippingOption, Update)
 from environs import Env
+
 
 env = Env()
 env.read_env()
@@ -41,5 +42,5 @@ def precheckout_callback(bot, update):
         bot.answer_pre_checkout_query(pre_checkout_query_id=query.id, ok=True)
 
 
-def successful_payment_callback(bot, update):
-    update.message.reply_text("Спасибо за оплату!")
+# def successful_payment_callback(bot, update):
+#     update.message.reply_text("Спасибо за оплату!")
