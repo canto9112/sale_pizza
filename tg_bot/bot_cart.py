@@ -1,7 +1,7 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 
 from moltin import moltin_cart
-from tg_bot import start_bot
+import start_bot
 
 
 def update_cart(bot, update, access_token):
